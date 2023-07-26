@@ -36,13 +36,3 @@ pub fn base() -> String {
 pub fn gens() -> String {
     return format!("{}/generations", base());
 }
-
-
-
-// The current generation. (Not created at setup.)
-pub fn cgen() -> String {
-    let current = read_file(format!("{}/current", gens()).as_str()).unwrap();
-    let current = current.trim();
-
-    return format!("{}/{}", gens(), current);
-}
