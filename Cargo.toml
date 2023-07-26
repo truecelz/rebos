@@ -1,0 +1,21 @@
+[package]
+name = "dister"
+authors = ["Jackson Novak <ogloooglooagla@tutanota.com>"]
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = {version = "4.3.19", features = ["derive"]}
+colored = "2.0.4"
+
+[profile.bench]
+lto = "thin"
+debug = 1
+strip = false
+
+[profile.release]
+debug = 0
+lto = true
+opt-level = 3
+codegen-units = 1
+strip = true
