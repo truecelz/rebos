@@ -10,7 +10,7 @@ pub fn setup() -> Result<(), io::Error> {
     let mut results: Vec<Result<(), io::Error>> = Vec::new();
 
     results.push(create_directory(base().as_str()));
-    results.push(create_directory(base().as_str()));
+    results.push(create_directory(gens().as_str()));
 
     for i in results {
         match i {
