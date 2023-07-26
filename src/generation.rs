@@ -9,3 +9,10 @@ pub fn build() -> Result<(), io::Error> {
 
     return Ok(());
 }
+
+pub fn rollback(by: usize) -> Result<(), io::Error> {
+    debug!("Please work on generation::rollback()!");
+    debug!("generation::rollback({})", by);
+
+    return Ok(());
+}

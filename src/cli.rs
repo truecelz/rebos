@@ -22,5 +22,5 @@ pub enum Commands {
 #[derive(Parser, Debug)]
 pub struct Rollback {
     /// How many generations to rollback by.
-    pub back: usize,
+    pub by: usize,
 }
