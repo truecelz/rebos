@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 use colored::Colorize;
+use users::get_current_username;
 use crate::convert::*;
 
 #[derive(PartialEq)]
@@ -12,6 +13,23 @@ pub enum HistoryMode {
 pub struct History {
     pub mode: HistoryMode,
     pub line: String,
+}
+
+pub fn is_root_user() -> bool {
+    if username() == "root" {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+pub fn username() -> String {
+    let username: String = match get_current_username() {
+        Some(uname) => uname.to_str().unwrap().to_string(),
+        None => panic!("Unable to get username!"),
+    };
+
+    return username;
 }
 
 pub fn history(str_1: &str, str_2: &str) -> Vec<History> {

@@ -6,11 +6,15 @@ mod places;
 mod cli;
 mod log;
 mod generation;
+mod repeated;
 
 // Import stuff from source files and crates.
 use clap::Parser;
 use log::*;
 use std::io;
+use filesystem::*;
+use library::*;
+use repeated::*;
 
 // The exit code for the program.
 #[derive(PartialEq)]
@@ -28,12 +32,12 @@ fn main() {
 
 // The "main" function.
 fn app() -> ExitCode {
-    match setup() {
-        Ok(_o) => {},
-        Err(_e) => return ExitCode::Fail,
-    };
-
     let args = cli::Cli::parse();
+
+    if file_exists(places::base().as_str()) == false {
+        error!("It seems that the program is not set up!");
+        return ExitCode::Fail;
+    }
 
     #[allow(unreachable_patterns)]
     match &args.command {
@@ -51,6 +55,22 @@ fn app() -> ExitCode {
                 Err(_e) => return ExitCode::Fail,
             }
         },
+        cli::Commands::Setup => {
+            match is_root_user() {
+                true => {
+                    info!("Beginning setup...");
+                },
+                false => {
+                    error_type(ErrorType::RunAsRoot);
+                    return ExitCode::Fail;
+                },
+            };
+
+            match setup() {
+                Ok(_o) => info!("Set up the program successfully!"),
+                Err(_e) => return ExitCode::Fail,
+            };
+        },
         _ => {
             error!("Command not usable yet!");
             return ExitCode::Fail;
@@ -62,5 +82,10 @@ fn app() -> ExitCode {
 
 // Function that sets up the program.
 fn setup() -> Result<(), io::Error> {
+    match places::setup() {
+        Ok(_o) => info!("Core directories verified successfully!"),
+        Err(e) => return Err(e),
+    };
+
     return Ok(());
 }

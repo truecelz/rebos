@@ -5,6 +5,11 @@ use std::fs::File;
 use std::io;
 use std::io::{Read, Write};
 
+// Check to see if a file exists.
+pub fn file_exists(path: &str) -> bool {
+    return std::path::Path::new(path).exists();
+}
+
 // Read a file.
 pub fn read_file(path: &str) -> Result<String, io::Error> {
     let mut file = match File::open(path) {
@@ -37,8 +42,8 @@ pub fn write_file(path: &str, contents: &str) -> Result<(), io::Error> {
 }
 
 // Return a list of items in a directory. (Returns full paths!)
-pub fn read_directory(directory: &str) -> Result<Vec<String>, io::Error> {
-    let contents = match fs::read_dir(directory) {
+pub fn list_directory(path: &str) -> Result<Vec<String>, io::Error> {
+    let contents = match fs::read_dir(path) {
         Ok(o) => o,
         Err(e) => return Err(e),
     };
@@ -50,4 +55,14 @@ pub fn read_directory(directory: &str) -> Result<Vec<String>, io::Error> {
     }
 
     return Ok(return_contents);
+}
+
+// Create a directory, and its parents.
+pub fn create_directory(path: &str) -> Result<(), io::Error> {
+    match fs::create_dir_all(path) {
+        Ok(_o) => {},
+        Err(e) => return Err(e),
+    };
+
+    return Ok(());
 }

@@ -17,6 +17,8 @@ pub enum Commands {
     Build,
     /// Rollback to a previous generation.
     Rollback(Rollback),
+    /// Run the program setup.
+    Setup,
 }
 
 #[derive(Parser, Debug)]
