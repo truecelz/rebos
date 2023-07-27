@@ -1,4 +1,6 @@
-[*] >> Finish the user config creation function.
-[ ] >> Impliment the generations system.
-[*] >> Make Clap commands actually do something!
-[*] >> Impliment the directory structure.
+[ ] >> List.
+[ ] >> Commit.
+[ ] >> Set Current.
+[ ] >> latest
+[ ] >> Rollback.
+[ ] >> Build.
