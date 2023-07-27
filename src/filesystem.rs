@@ -10,6 +10,11 @@ pub fn file_exists(path: &str) -> bool {
     return std::path::Path::new(path).exists();
 }
 
+// Check to see if a folder exists.
+pub fn folder_exists(path: &str) -> bool {
+    return file_exists(path);
+}
+
 // Read a file.
 pub fn read_file(path: &str) -> Result<String, io::Error> {
     let mut file = match File::open(path) {
@@ -27,7 +32,7 @@ pub fn read_file(path: &str) -> Result<String, io::Error> {
 }
 
 // Write a file.
-pub fn write_file(path: &str, contents: &str) -> Result<(), io::Error> {
+pub fn write_file(contents: &str, path: &str) -> Result<(), io::Error> {
     let mut file = match File::create(path) {
         Ok(o) => o,
         Err(e) => return Err(e),
@@ -60,6 +65,15 @@ pub fn list_directory(path: &str) -> Result<Vec<String>, io::Error> {
 // Create a directory, and its parents.
 pub fn create_directory(path: &str) -> Result<(), io::Error> {
     match fs::create_dir_all(path) {
+        Ok(_o) => {},
+        Err(e) => return Err(e),
+    };
+
+    return Ok(());
+}
+
+pub fn remove_directory(path: &str) -> Result<(), io::Error> {
+    match fs::remove_dir_all(path) {
         Ok(_o) => {},
         Err(e) => return Err(e),
     };

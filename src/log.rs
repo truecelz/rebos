@@ -5,7 +5,8 @@ use colored::{Colorize, ColoredString};
 pub enum LogMode {
     Info,
     Error,
-    Warn,
+    Warning,
+    Note,
     Debug,
 }
 
@@ -24,9 +25,16 @@ macro_rules! error {
 }
 
 #[macro_export]
-macro_rules! warn {
+macro_rules! warning {
     ($($arg:tt)*) => ({
-        log_core_print(format!($($arg)*), LogMode::Warn);
+        log_core_print(format!($($arg)*), LogMode::Warning);
+    });
+}
+
+#[macro_export]
+macro_rules! note {
+    ($($arg:tt)*) => ({
+        log_core_print(format!($($arg)*), LogMode::Note);
     });
 }
 
@@ -41,7 +49,8 @@ pub fn log_core_print(msg: String, mode: LogMode) {
     let prefix_text: &str = match mode {
         LogMode::Info => "Info",
         LogMode::Error => "Error",
-        LogMode::Warn => "Warning",
+        LogMode::Warning => "Warning",
+        LogMode::Note => "Note",
         LogMode::Debug => "Debug",
     };
 
@@ -54,7 +63,8 @@ fn apply_color(string: String, mode: &LogMode) -> String {
     let colored_string: ColoredString = match mode {
         LogMode::Info => string.bright_green(),
         LogMode::Error => string.bright_red(),
-        LogMode::Warn => string.bright_yellow(),
+        LogMode::Warning => string.bright_yellow(),
+        LogMode::Note => string.bright_yellow(),
         LogMode::Debug => string.bright_magenta(),
     };
 

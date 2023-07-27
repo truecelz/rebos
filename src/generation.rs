@@ -6,6 +6,12 @@ use crate::places;
 use crate::log::*;
 use crate::debug;
 
+pub fn commit() -> Result<(), io::Error> {
+    debug!("Please work on generation::commit()!");
+
+    return Ok(());
+}
+
 pub fn build() -> Result<(), io::Error> {
     debug!("Please work on generation::build()!");
 
@@ -23,5 +29,5 @@ pub fn current() -> String {
     let current = read_file(format!("{}/current", places::gens()).as_str()).unwrap();
     let current = current.trim();
 
-    return format!("{}/{}", places::gens(), current);
+    return format!("{}/{}.toml", places::gens(), current);
 }

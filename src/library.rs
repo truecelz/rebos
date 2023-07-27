@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use std::io;
 use colored::Colorize;
 use users::get_current_username;
 use crate::convert::*;
@@ -13,6 +14,10 @@ pub enum HistoryMode {
 pub struct History {
     pub mode: HistoryMode,
     pub line: String,
+}
+
+pub fn custom_error(error: &str) -> io::Error {
+    return io::Error::new(io::ErrorKind::Other, error);
 }
 
 pub fn is_root_user() -> bool {

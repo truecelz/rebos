@@ -3,6 +3,7 @@
 use crate::filesystem::*;
 use crate::log::*;
 use crate::error;
+use crate::dir;
 use std::io;
 
 // The setup function for the directories.
@@ -35,4 +36,9 @@ pub fn base() -> String {
 // The directory of generations.
 pub fn gens() -> String {
     return format!("{}/generations", base());
+}
+
+// User's Dister config directory.
+pub fn base_user() -> String {
+    return format!("{}/dister", dir::config());
 }

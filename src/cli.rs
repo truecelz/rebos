@@ -13,12 +13,22 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
-    /// Confirm changes and build! (You can always roll back later.)
+    /// Confirm your custom generation, and make it the 'current' generation.
+    Commit,
+    /// Build the 'current' generation. (You can always roll back later.)
     Build,
-    /// Rollback to a previous generation.
+    /// Rollback to a previous generation. (You still need to build after rolling back.)
     Rollback(Rollback),
     /// Run the program setup.
     Setup,
+    /// Get information on the generation in the user's config.
+    GenInfo,
+    /// Create a default Dister configuration.
+    InitConfig {
+        /// Forces the command to create the default config, even if it means overwriting.
+        #[clap(long)]
+        force: bool,
+    },
 }
 
 #[derive(Parser, Debug)]

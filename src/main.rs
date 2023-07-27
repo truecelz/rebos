@@ -7,6 +7,8 @@ mod cli;
 mod log;
 mod generation;
 mod repeated;
+mod config;
+mod dir;
 
 // Import stuff from source files and crates.
 use clap::Parser;
@@ -15,6 +17,7 @@ use std::io;
 use filesystem::*;
 use library::*;
 use repeated::*;
+use config::ConfigSide;
 
 // The exit code for the program.
 #[derive(PartialEq)]
@@ -41,8 +44,15 @@ fn app() -> ExitCode {
 
     #[allow(unreachable_patterns)]
     match &args.command {
+        cli::Commands::Commit => {
+            info!("Committing user generation...");
+            match generation::commit() {
+                Ok(_o) => info!("Committed generation successfully!"),
+                Err(_e) => return ExitCode::Fail,
+            };
+        },
         cli::Commands::Build => {
-            info!("Building generation...");
+            info!("Building 'current' generation...");
             match generation::build() {
                 Ok(_o) => info!("Built generation successfully!"),
                 Err(_e) => return ExitCode::Fail,
@@ -68,6 +78,21 @@ fn app() -> ExitCode {
 
             match setup() {
                 Ok(_o) => info!("Set up the program successfully!"),
+                Err(_e) => return ExitCode::Fail,
+            };
+        },
+        cli::Commands::GenInfo => {
+            let generation = match config::gen(ConfigSide::User) {
+                Ok(o) => o,
+                Err(_e) => return ExitCode::Fail,
+            };
+
+            info!("{:?}", generation);
+        },
+        cli::Commands::InitConfig { force } => {
+            info!("Creating user configuration...");
+            match config::init_user_config(*force) {
+                Ok(_o) => info!("Created user configuration successfully!"),
                 Err(_e) => return ExitCode::Fail,
             };
         },
