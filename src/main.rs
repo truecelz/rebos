@@ -37,9 +37,14 @@ fn main() {
 fn app() -> ExitCode {
     let args = cli::Cli::parse();
 
-    if file_exists(places::base().as_str()) == false {
-        error!("It seems that the program is not set up!");
-        return ExitCode::Fail;
+    match &args.command {
+        cli::Commands::Setup => {},
+        _ => {
+            if file_exists(places::base().as_str()) == false {
+                error!("It seems that the program is not set up!");
+                return ExitCode::Fail;
+            }
+        },
     }
 
     #[allow(unreachable_patterns)]

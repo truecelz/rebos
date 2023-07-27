@@ -2,22 +2,22 @@
 
 use crate::filesystem::*;
 use crate::log::*;
-use crate::error;
+use crate::{info, error};
 use crate::dir;
 use std::io;
 
 // The setup function for the directories.
 pub fn setup() -> Result<(), io::Error> {
-    let mut results: Vec<Result<(), io::Error>> = Vec::new();
+    let directories = vec![
+        base(),
+        gens(),
+    ];
 
-    results.push(create_directory(base().as_str()));
-    results.push(create_directory(gens().as_str()));
-
-    for i in results {
-        match i {
-            Ok(_o) => {},
+    for i in directories.iter() {
+        match create_directory(i) {
+            Ok(_o) => info!("Created directory: {}", i),
             Err(e) => {
-                error!("Failed to create core program directories!");
+                error!("Failed to create directory: {}", i);
                 return Err(e);
             },
         };
