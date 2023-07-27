@@ -16,6 +16,12 @@ pub struct History {
     pub line: String,
 }
 
+pub fn name_from_path(path: &str) -> String {
+    let converted = str_to_string_vec(path, "/");
+
+    return converted[converted.len() - 1].to_string();
+}
+
 pub fn custom_error(error: &str) -> io::Error {
     return io::Error::new(io::ErrorKind::Other, error);
 }

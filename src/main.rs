@@ -9,6 +9,7 @@ mod generation;
 mod repeated;
 mod config;
 mod dir;
+mod utils;
 
 // Import stuff from source files and crates.
 use clap::Parser;
@@ -85,14 +86,10 @@ fn app() -> ExitCode {
             };
         },
         cli::Commands::List => {
-            let list = match generation::list() {
-                Ok(o) => o,
+            match generation::list_print() {
+                Ok(_o) => {},
                 Err(_e) => return ExitCode::Fail,
             };
-
-            for i in list.iter() {
-                generic!("{}", i);
-            }
         },
         cli::Commands::Setup => {
             match is_root_user() {
