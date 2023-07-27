@@ -55,9 +55,9 @@ pub fn init_user_config(force: bool) -> Result<(), io::Error> {
             warning!("Overwriting existing configuration...");
 
             match remove_directory(places::base_user().as_str()) {
-                Ok(_o) => {},
+                Ok(_o) => info!("Removed directory: {}", places::base_user()),
                 Err(e) => {
-                    error!("Failed to remove directory! ({})", places::base_user());
+                    error!("Failed to remove directory: {}", places::base_user());
                     return Err(e);
                 },
             };
