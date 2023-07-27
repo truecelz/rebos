@@ -49,10 +49,10 @@ fn app() -> ExitCode {
 
     #[allow(unreachable_patterns)]
     match &args.command {
-        cli::Commands::Commit => {
+        cli::Commands::Commit(c) => {
             info!("Committing user generation...");
-            match generation::commit() {
-                Ok(_o) => info!("Committed generation successfully!"),
+            match generation::commit(c.msg.as_str()) {
+                Ok(_o) => info!("Committed generation successfully! (\"{}\")", c.msg),
                 Err(_e) => return ExitCode::Fail,
             };
         },
@@ -68,6 +68,30 @@ fn app() -> ExitCode {
             match generation::rollback(r.by) {
                 Ok(_o) => info!("Rolled back successfully!"),
                 Err(_e) => return ExitCode::Fail,
+            };
+        },
+        cli::Commands::Latest => {
+            info!("Jumping to latest generation...");
+            match generation::latest() {
+                Ok(_o) => info!("Jumped to latest successfully!"),
+                Err(_e) => return ExitCode::Fail,
+            };
+        },
+        cli::Commands::SetCurrent(s) => {
+            info!("Jumping to generation {}...", s.to);
+            match generation::set_current(s.to) {
+                Ok(_o) => info!("Jumped to generation {} successfully!", s.to),
+                Err(_e) => return ExitCode::Fail,
+            };
+        },
+        cli::Commands::List => {
+            let list = match generation::list() {
+                Ok(o) => o,
+                Err(_e) => return ExitCode::Fail,
+            };
+
+            for i in list.iter() {
+                generic!("{}", i);
             }
         },
         cli::Commands::Setup => {

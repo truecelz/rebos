@@ -14,11 +14,17 @@ pub struct Cli {
 #[derive(Subcommand, Debug)]
 pub enum Commands {
     /// Confirm your custom generation, and make it the 'current' generation.
-    Commit,
+    Commit(Commit),
     /// Build the 'current' generation. (You can always roll back later.)
     Build,
     /// Rollback to a previous generation. (You still need to build after rolling back.)
     Rollback(Rollback),
+    /// Set the 'current' generation to the latest generation.
+    Latest,
+    /// Set the 'current' generation to a specific generation.
+    SetCurrent(SetCurrent),
+    /// List all system generations.
+    List,
     /// Run the program setup.
     Setup,
     /// Get information on the generation in the user's config.
@@ -32,7 +38,17 @@ pub enum Commands {
 }
 
 #[derive(Parser, Debug)]
+pub struct Commit {
+    pub msg: String,
+}
+
+#[derive(Parser, Debug)]
+pub struct SetCurrent {
+    pub to: isize,
+}
+
+#[derive(Parser, Debug)]
 pub struct Rollback {
     /// How many generations to rollback by.
-    pub by: usize,
+    pub by: isize,
 }

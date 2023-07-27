@@ -114,7 +114,7 @@ fn config_for(config: Config, side: ConfigSide) -> String {
     return match config {
         Config::Generation => match side {
             ConfigSide::User => format!("{}/gen.toml", places::base_user()),
-            ConfigSide::System => generation::current(),
+            ConfigSide::System => generation::get_current(),
         },
     };
 }

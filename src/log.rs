@@ -11,6 +11,13 @@ pub enum LogMode {
 }
 
 #[macro_export]
+macro_rules! generic {
+    ($($arg:tt)*) => ({
+        log_generic_print(format!($($arg)*));
+    });
+}
+
+#[macro_export]
 macro_rules! info {
     ($($arg:tt)*) => ({
         log_core_print(format!($($arg)*), LogMode::Info);
@@ -43,6 +50,10 @@ macro_rules! debug {
     ($($arg:tt)*) => ({
         log_core_print(format!($($arg)*), LogMode::Debug);
     });
+}
+
+pub fn log_generic_print(msg: String) {
+    println!("{} {}", " :".black().bold(), msg);
 }
 
 pub fn log_core_print(msg: String, mode: LogMode) {
