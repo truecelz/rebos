@@ -4,13 +4,65 @@ use std::io;
 use crate::filesystem::*;
 use crate::places;
 use crate::log::*;
-use crate::{error, debug, generic};
+use crate::{info, error, debug, generic};
 use crate::library::*;
+use crate::config;
+use crate::config::{Config, ConfigSide};
+
+// Get latest generation number.
+fn latest_number() -> Result<usize, io::Error> {
+    let list_len = match list() {
+        Ok(o) => o,
+        Err(e) => {
+            return Err(e);
+        },
+    }.len();
+
+    return Ok(list_len);
+}
 
 // Create a new system generation based on the user generation.
 pub fn commit(msg: &str) -> Result<(), io::Error> {
-    debug!("Please work on generation::commit()!");
-    debug!("generation::commit(\"{}\")", msg);
+    let gen_dir = format!("{}/{}", places::gens(), match latest_number() {
+        Ok(o) => o,
+        Err(e) => {
+            error!("Failed to get latest generation number!");
+            return Err(e);
+        },
+    } + 1);
+
+    match create_directory(gen_dir.as_str()) {
+        Ok(_o) => info!("Created generation directory."),
+        Err(e) => {
+            error!("Failed to create generation directory!");
+            return Err(e);
+        },
+    };
+
+    let user_gen: String = match read_file(config::config_for(Config::Generation, ConfigSide::User).as_str()) {
+        Ok(o) => o,
+        Err(e) => {
+            error!("Failed to read user generation file!");
+            error!("Exact Error: {:?}", e);
+
+            return Err(e);
+        },
+    };
+
+    let files = vec![
+        (msg, format!("{}/commit", gen_dir)),
+        (user_gen.as_str(), format!("{}/gen.toml", gen_dir)),
+    ];
+
+    for i in files.iter() {
+        match write_file(i.0, i.1.as_str()) {
+            Ok(_o) => info!("Created file: {}", name_from_path(i.1.as_str())),
+            Err(e) => {
+                error!("Failed to create file: {}", i.1);
+                return Err(e);
+            },
+        };
+    }
 
     return Ok(());
 }
@@ -89,5 +141,5 @@ pub fn get_current() -> String {
     let current = read_file(format!("{}/current", places::gens()).as_str()).unwrap();
     let current = current.trim();
 
-    return format!("{}/{}.toml", places::gens(), current);
+    return format!("{}/{}/gen.toml", places::gens(), current);
 }

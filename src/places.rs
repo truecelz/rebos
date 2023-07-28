@@ -30,7 +30,7 @@ pub fn setup() -> Result<(), io::Error> {
 
 // The base directory of operations for Dister.
 pub fn base() -> String {
-    return String::from("/etc/dister");
+    return format!("{}/.dister-base", dir::home());
 }
 
 // The directory of generations.

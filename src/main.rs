@@ -17,7 +17,6 @@ use log::*;
 use std::io;
 use filesystem::*;
 use library::*;
-use repeated::*;
 use config::ConfigSide;
 
 // The exit code for the program.
@@ -36,6 +35,15 @@ fn main() {
 
 // The "main" function.
 fn app() -> ExitCode {
+    match is_root_user() {
+        true => {
+            error!("Cannot run as root! Please run as the normal user!");
+            return ExitCode::Fail;
+        },
+
+        false => {},
+    };
+
     let args = cli::Cli::parse();
 
     match &args.command {
@@ -52,6 +60,7 @@ fn app() -> ExitCode {
     match &args.command {
         cli::Commands::Commit(c) => {
             info!("Committing user generation...");
+
             match generation::commit(c.msg.as_str()) {
                 Ok(_o) => info!("Committed generation successfully! (\"{}\")", c.msg),
                 Err(_e) => return ExitCode::Fail,
@@ -92,15 +101,7 @@ fn app() -> ExitCode {
             };
         },
         cli::Commands::Setup => {
-            match is_root_user() {
-                true => {
-                    info!("Beginning setup...");
-                },
-                false => {
-                    error_type(ErrorType::RunAsRoot);
-                    return ExitCode::Fail;
-                },
-            };
+            info!("Beginning setup...");
 
             match setup() {
                 Ok(_o) => info!("Set up the program successfully!"),

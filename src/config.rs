@@ -12,13 +12,23 @@ use crate::config;
 
 // Constants
 const DEFAULT_USER_GEN: &str =
-"#########################
-#### Generation File ####
-#########################
+"# --------------------- #
+#    Generation File    #
+# --------------------- #
 
 # Packages to be installed via the native package manager.
 pkgs = [
     # \"git\",
+]
+
+# Packages to be installed via Flatpak.
+flatpaks = [
+    # \"flatseal\",
+]
+
+# Flatpak repositories.
+flatpak_repos = [
+    # [\"flathub\", \"https://flathub.org/repo/flathub.flatpakrepo\"],
 ]
 ";
 
@@ -26,6 +36,8 @@ pkgs = [
 #[derive(Deserialize, Debug)]
 pub struct Generation {
     pkgs: Vec<String>,
+    flatpaks: Vec<String>,
+    flatpak_repos: Vec<(String, String)>,
 }
 
 // This determinds if a function should
@@ -89,7 +101,7 @@ pub fn init_user_config(force: bool) -> Result<(), io::Error> {
     return Ok(());
 }
 
-// Return generation config for...
+// Return generation structure for...
 pub fn gen(side: ConfigSide) -> Result<Generation, io::Error> {
     let generation: Generation = match toml::from_str(match read_file(config_for(Config::Generation, side).as_str()) {
         Ok(o) => o,
@@ -110,7 +122,7 @@ pub fn gen(side: ConfigSide) -> Result<Generation, io::Error> {
 }
 
 // Return path for a config file.
-fn config_for(config: Config, side: ConfigSide) -> String {
+pub fn config_for(config: Config, side: ConfigSide) -> String {
     return match config {
         Config::Generation => match side {
             ConfigSide::User => format!("{}/gen.toml", places::base_user()),
