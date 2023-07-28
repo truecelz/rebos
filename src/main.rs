@@ -26,6 +26,10 @@ enum ExitCode {
     Fail,
 }
 
+// Use this function for testing code!
+fn test_code() {
+}
+
 // We are using main() to run another function, and exit according to the exit code.
 fn main() {
     if app() == ExitCode::Fail {
@@ -35,6 +39,8 @@ fn main() {
 
 // The "main" function.
 fn app() -> ExitCode {
+    test_code(); // This function is for nothing but testing code whilst developing!
+
     match is_root_user() {
         true => {
             error!("Cannot run as root! Please run as the normal user!");

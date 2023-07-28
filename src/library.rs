@@ -43,9 +43,21 @@ pub fn username() -> String {
     return username;
 }
 
+pub fn remove_string_vec_duplicates(dup_vec: &Vec<String>) -> Vec<String> {
+    let mut new_vec: Vec<String> = Vec::new();
+
+    for i in dup_vec.iter() {
+        if new_vec.contains(i) == false {
+            new_vec.push(i.to_string());
+        }
+    }
+
+    return new_vec;
+}
+
 pub fn history(str_1: &str, str_2: &str) -> Vec<History> {
-    let lines_1 = str_to_string_vec(str_1, "\n");
-    let lines_2 = str_to_string_vec(str_2, "\n");
+    let lines_1 = remove_string_vec_duplicates(&str_to_string_vec(str_1, "\n"));
+    let lines_2 = remove_string_vec_duplicates(&str_to_string_vec(str_2, "\n"));
 
     let mut history_vec: Vec<History> = Vec::new();
 
