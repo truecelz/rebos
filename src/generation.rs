@@ -1,6 +1,8 @@
 #![allow(dead_code)]
 
 use std::io;
+use colored::Colorize;
+
 use crate::filesystem::*;
 use crate::places;
 use crate::log::*;
@@ -188,12 +190,12 @@ pub fn list_print() -> Result<(), io::Error> {
     };
 
     for i in list_items.iter() {
-        let misc_text: &str;
+        let misc_text: String;
 
         if i.2 {
-            misc_text = " >> CURRENT <<";
+            misc_text = format!(" {}{}{}", "[".bright_black().bold(), "CURRENT".bright_green().bold(), "]".bright_black().bold());
         } else {
-            misc_text = "";
+            misc_text = "".to_string();
         }
 
         generic!("{} ... ({}){}", i.0, i.1, misc_text);
