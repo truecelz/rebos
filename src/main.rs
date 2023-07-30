@@ -55,7 +55,7 @@ fn app() -> ExitCode {
     match &args.command {
         cli::Commands::Setup => {},
         _ => {
-            if file_exists(places::base().as_str()) == false {
+            if path_exists(places::base().as_str()) == false {
                 error!("It seems that the program is not set up!");
                 return ExitCode::Fail;
             }

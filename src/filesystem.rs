@@ -2,17 +2,33 @@
 
 use std::fs;
 use std::fs::File;
+use std::path::Path;
 use std::io;
 use std::io::{Read, Write};
 
-// Check to see if a file exists.
-pub fn file_exists(path: &str) -> bool {
-    return std::path::Path::new(path).exists();
+// Path Type Enum
+pub enum PathType {
+    File,
+    Directory,
+    Invalid,
 }
 
-// Check to see if a folder exists.
-pub fn folder_exists(path: &str) -> bool {
-    return file_exists(path);
+// Is something a file or directory?
+pub fn path_type(path: &str) -> PathType {
+    match path_exists(path) {
+        true => {},
+        false => return PathType::Invalid,
+    };
+
+    match Path::new(path).is_file() {
+        true => return PathType::File,
+        false => return PathType::Directory,
+    };
+}
+
+// Check to see if a path exists.
+pub fn path_exists(path: &str) -> bool {
+    return Path::new(path).exists();
 }
 
 // Read a file.

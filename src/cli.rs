@@ -44,7 +44,7 @@ pub struct Commit {
 
 #[derive(Parser, Debug)]
 pub struct SetCurrent {
-    pub to: isize,
+    pub to: usize,
 }
 
 #[derive(Parser, Debug)]

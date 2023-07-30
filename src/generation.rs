@@ -14,6 +14,7 @@ fn latest_number() -> Result<usize, io::Error> {
     let list_len = match list() {
         Ok(o) => o,
         Err(e) => {
+            error!("Failed to get latest generation number!");
             return Err(e);
         },
     }.len();
@@ -23,13 +24,12 @@ fn latest_number() -> Result<usize, io::Error> {
 
 // Create a new system generation based on the user generation.
 pub fn commit(msg: &str) -> Result<(), io::Error> {
-    let gen_dir = format!("{}/{}", places::gens(), match latest_number() {
+    let generation_number = match latest_number() {
         Ok(o) => o,
-        Err(e) => {
-            error!("Failed to get latest generation number!");
-            return Err(e);
-        },
-    } + 1);
+        Err(e) => return Err(e),
+    } + 1;
+
+    let gen_dir = format!("{}/{}", places::gens(), generation_number);
 
     match create_directory(gen_dir.as_str()) {
         Ok(_o) => info!("Created generation directory."),
@@ -64,6 +64,11 @@ pub fn commit(msg: &str) -> Result<(), io::Error> {
         };
     }
 
+    match set_current(generation_number) {
+        Ok(_o) => {},
+        Err(e) => return Err(e),
+    };
+
     return Ok(());
 }
 
@@ -90,16 +95,43 @@ pub fn latest() -> Result<(), io::Error> {
 }
 
 // Set the 'current' generation to a specific generation.
-pub fn set_current(to: isize) -> Result<(), io::Error> {
-    debug!("Please work on generation::set_current()!");
-    debug!("generation::set_current({})", to);
+pub fn set_current(to: usize) -> Result<(), io::Error> {
+    match write_file(to.to_string().trim(), format!("{}/current", places::gens()).as_str()) {
+        Ok(_o) => {
+            info!("Set 'current' to: {}", to);
+            return Ok(());
+        },
+        Err(e) => {
+            error!("Failed to create/write 'current' tracking file!");
+            return Err(e);
+        },
+    };
+}
 
-    return Ok(());
+// Get the 'current' generation number.
+pub fn get_current() -> Result<usize, io::Error> {
+    let contents = match read_file(format!("{}/current", places::gens()).as_str()) {
+        Ok(o) => o,
+        Err(e) => {
+            error!("Failed to read 'current' file!");
+            return Err(e);
+        },
+    };
+
+    let generation: usize = match contents.trim().parse() {
+        Ok(o) => o,
+        Err(_e) => {
+            error!("Failed to parse number from 'current' file! (Maybe 'current' file is corrupted?)");
+            return Err(custom_error("Failed to parse number out of 'current' file!"));
+        },
+    };
+
+    return Ok(generation);
 }
 
 // List all generations.
-pub fn list() -> Result<Vec<(String, String)>, io::Error> {
-    let generations = match list_directory(places::gens().as_str()) {
+pub fn list() -> Result<Vec<(String, String, bool)>, io::Error> {
+    let gen_listed = match list_directory(places::gens().as_str()) {
         Ok(o) => o,
         Err(e) => {
             error!("Failed to list the generations directory! ({})", places::gens());
@@ -107,7 +139,20 @@ pub fn list() -> Result<Vec<(String, String)>, io::Error> {
         },
     };
 
-    let mut gens_with_info: Vec<(String, String)> = Vec::new();
+    let mut generations: Vec<String> = Vec::new();
+
+    for i in gen_listed.iter() {
+        match path_type(i) {
+            PathType::File => {},
+            PathType::Directory => generations.push(i.to_string()),
+            PathType::Invalid => {
+                error!("Found invalid path! (Listing generations.)");
+                return Err(custom_error("Found invalid path."));
+            },
+        };
+    }
+
+    let mut gens_with_info: Vec<(String, String, bool)> = Vec::new();
 
     for i in generations.iter() {
         let generation_name = name_from_path(i);
@@ -116,7 +161,20 @@ pub fn list() -> Result<Vec<(String, String)>, io::Error> {
             Err(_e) => "<< COMMIT MESSAGE MISSING >>".to_string(),
         };
 
-        gens_with_info.push((generation_name, commit_msg));
+        let current_number = match get_current() {
+            Ok(o) => o,
+            Err(e) => return Err(e),
+        };
+
+        let is_current: bool;
+
+        if generation_name == current_number.to_string() {
+            is_current = true;
+        } else {
+            is_current = false;
+        }
+
+        gens_with_info.push((generation_name, commit_msg, is_current));
     }
 
     return Ok(gens_with_info);
@@ -130,14 +188,22 @@ pub fn list_print() -> Result<(), io::Error> {
     };
 
     for i in list_items.iter() {
-        generic!("{} ... ({})", i.0, i.1);
+        let misc_text: &str;
+
+        if i.2 {
+            misc_text = " >> CURRENT <<";
+        } else {
+            misc_text = "";
+        }
+
+        generic!("{} ... ({}){}", i.0, i.1, misc_text);
     }
 
     return Ok(());
 }
 
 // Get the 'current' generation TOML file.
-pub fn get_current() -> String {
+pub fn current_gen() -> String {
     let current = read_file(format!("{}/current", places::gens()).as_str()).unwrap();
     let current = current.trim();
 

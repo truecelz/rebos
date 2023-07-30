@@ -55,7 +55,7 @@ pub enum Config {
 
 // Create the user configuration.
 pub fn init_user_config(force: bool) -> Result<(), io::Error> {
-    if folder_exists(places::base_user().as_str()) {
+    if path_exists(places::base_user().as_str()) {
         if force == false {
             error!("The user configuration already exists, if you want to overwrite everything in your configuration, please use '--force'!");
             note!("Forcing to overwrite will overwrite EVERYTHING!!! So, if you are just trying to re-generate one broken file, copy everything you want to keep out of the directory first!");
@@ -126,7 +126,7 @@ pub fn config_for(config: Config, side: ConfigSide) -> String {
     return match config {
         Config::Generation => match side {
             ConfigSide::User => format!("{}/gen.toml", places::base_user()),
-            ConfigSide::System => generation::get_current(),
+            ConfigSide::System => generation::current_gen(),
         },
     };
 }
