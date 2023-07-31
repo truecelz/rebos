@@ -13,7 +13,7 @@ use crate::config::{Config, ConfigSide};
 
 // Get latest generation number.
 fn latest_number() -> Result<usize, io::Error> {
-    let list_len = match list() {
+    let list_len = match list_with_no_calls() {
         Ok(o) => o,
         Err(e) => {
             error!("Failed to get latest generation number!");
@@ -83,27 +83,12 @@ pub fn build() -> Result<(), io::Error> {
 
 // Set the 'current' generation to another older generation.
 pub fn rollback(by: isize) -> Result<(), io::Error> {
-    let latest_num = match latest_number() {
-        Ok(o) => o,
-        Err(e) => return Err(e),
-    } as isize;
-
     let current_num = match get_current() {
         Ok(o) => o,
         Err(e) => return Err(e),
     };
 
     let new_current = (current_num as isize) - by;
-
-    if new_current > latest_num {
-        error!("Out of range! MAX: {}", latest_num);
-        return Err(custom_error("Out of range!"));
-    }
-
-    if new_current < 1 {
-        error!("Out of range! MIN: 1");
-        return Err(custom_error("Out of range!"));
-    }
 
     match set_current(new_current as usize) {
         Ok(_o) => {},
@@ -128,6 +113,19 @@ pub fn latest() -> Result<(), io::Error> {
 
 // Set the 'current' generation to a specific generation.
 pub fn set_current(to: usize) -> Result<(), io::Error> {
+    if to > match latest_number() {
+        Ok(o) => o,
+        Err(e) => return Err(e),
+    } {
+        error!("Out of range! Too high!");
+        return Err(custom_error("Out of range!"));
+    }
+
+    if to < 1 {
+        error!("Out of range! Too low!");
+        return Err(custom_error("Out of range!"));
+    }
+
     match write_file(to.to_string().trim(), format!("{}/current", places::gens()).as_str()) {
         Ok(_o) => {
             info!("Set 'current' to: {}", to);
@@ -161,8 +159,18 @@ pub fn get_current() -> Result<usize, io::Error> {
     return Ok(generation);
 }
 
-// List all generations.
+// List all generations. (NORMAL)
 pub fn list() -> Result<Vec<(String, String, bool)>, io::Error> {
+    return list_core(true);
+}
+
+// List all generations. (ISOLATED MODE | For avoiding errors with called un-needed functions!)
+pub fn list_with_no_calls() -> Result<Vec<(String, String, bool)>, io::Error> {
+    return list_core(false);
+}
+
+// List all generations. (CORE)
+fn list_core(calls: bool) -> Result<Vec<(String, String, bool)>, io::Error> {
     let gen_listed = match list_directory(places::gens().as_str()) {
         Ok(o) => o,
         Err(e) => {
@@ -193,10 +201,16 @@ pub fn list() -> Result<Vec<(String, String, bool)>, io::Error> {
             Err(_e) => "<< COMMIT MESSAGE MISSING >>".to_string(),
         };
 
-        let current_number = match get_current() {
-            Ok(o) => o,
-            Err(e) => return Err(e),
-        };
+        let current_number: usize;
+
+        if calls == true {
+            current_number = match get_current() {
+                Ok(o) => o,
+                Err(e) => return Err(e),
+            };
+        } else {
+            current_number = 0;
+        }
 
         let is_current: bool;
 
