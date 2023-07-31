@@ -1,7 +1,7 @@
 [*] >> List.
 [*] >> Commit.
 [*] >> Set Current.
-[ ] >> Latest.
+[*] >> Latest.
 [ ] >> Rollback.
 [ ] >> Build.
 [ ] >> Improve the latest_number() function so that deleting older generations doesn't mess stuff up!

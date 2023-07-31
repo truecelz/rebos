@@ -91,7 +91,13 @@ pub fn rollback(by: isize) -> Result<(), io::Error> {
 
 // Set the 'current' generation to the latest generation.
 pub fn latest() -> Result<(), io::Error> {
-    debug!("Please work on generation::latest()!");
+    match set_current(match latest_number() {
+        Ok(o) => o,
+        Err(e) => return Err(e),
+    }) {
+        Ok(_o) => {},
+        Err(e) => return Err(e),
+    };
 
     return Ok(());
 }
