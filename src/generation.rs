@@ -83,8 +83,32 @@ pub fn build() -> Result<(), io::Error> {
 
 // Set the 'current' generation to another older generation.
 pub fn rollback(by: isize) -> Result<(), io::Error> {
-    debug!("Please work on generation::rollback()!");
-    debug!("generation::rollback({})", by);
+    let latest_num = match latest_number() {
+        Ok(o) => o,
+        Err(e) => return Err(e),
+    } as isize;
+
+    let current_num = match get_current() {
+        Ok(o) => o,
+        Err(e) => return Err(e),
+    };
+
+    let new_current = (current_num as isize) - by;
+
+    if new_current > latest_num {
+        error!("Out of range! MAX: {}", latest_num);
+        return Err(custom_error("Out of range!"));
+    }
+
+    if new_current < 1 {
+        error!("Out of range! MIN: 1");
+        return Err(custom_error("Out of range!"));
+    }
+
+    match set_current(new_current as usize) {
+        Ok(_o) => {},
+        Err(e) => return Err(e),
+    };
 
     return Ok(());
 }
