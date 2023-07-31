@@ -120,7 +120,7 @@ fn app() -> ExitCode {
                 Err(_e) => return ExitCode::Fail,
             };
 
-            info!("{:?}", generation);
+            info!("User-Side Generation: {:?}", generation);
         },
         cli::Commands::InitConfig { force } => {
             info!("Creating user configuration...");
