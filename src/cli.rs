@@ -35,6 +35,8 @@ pub enum Commands {
         #[clap(long)]
         force: bool,
     },
+    /// Print out what the latest generation number is.
+    WhatIsLatest,
 }
 
 #[derive(Parser, Debug)]

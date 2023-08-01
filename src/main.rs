@@ -130,6 +130,12 @@ fn app() -> ExitCode {
                 Err(_e) => return ExitCode::Fail,
             };
         },
+        cli::Commands::WhatIsLatest => {
+            info!("Latest generation number is: {}", match generation::latest_number() {
+                Ok(o) => o,
+                Err(_e) => return ExitCode::Fail,
+            });
+        },
         _ => {
             error!("Command not usable yet!");
             return ExitCode::Fail;

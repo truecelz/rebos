@@ -4,5 +4,6 @@
 [*] >> Latest.
 [*] >> Rollback.
 [ ] >> Build.
-[ ] >> Improve the latest_number() function so that deleting older generations doesn't mess stuff up!
+[*] >> Improve the latest_number() function so that deleting older generations doesn't mess stuff up!
 [*] >> Improve the output of gen-info! It really needs a makeover!
+[ ] >> Sort list output.

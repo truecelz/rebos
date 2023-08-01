@@ -21,16 +21,40 @@ pub struct Generation {
 }
 
 // Get latest generation number.
-fn latest_number() -> Result<usize, io::Error> {
-    let list_len = match list_with_no_calls() {
+pub fn latest_number() -> Result<usize, io::Error> {
+    let gen_list = match list_with_no_calls() {
         Ok(o) => o,
         Err(e) => {
             error!("Failed to get latest generation number!");
             return Err(e);
         },
-    }.len();
+    };
 
-    return Ok(list_len);
+    let mut generation_numbers: Vec<usize> = Vec::new();
+
+    for i in gen_list.iter() {
+        generation_numbers.push(match i.0.trim().parse() {
+            Ok(o) => o,
+            Err(_e) => {
+                error!("Tried to parse invalid generation name! ({})", i.0.trim());
+                return Err(custom_error("Failed to parse invalid generation name!"));
+            },
+        });
+    }
+
+    if generation_numbers.len() < 1 {
+        return Ok(0);
+    }
+
+    let latest_num = match generation_numbers.into_iter().max() {
+        Some(s) => s,
+        None => {
+            error!("Failed to get max number in generation numbers list!");
+            return Err(custom_error("Failed to get max number in generation number list!"));
+        },
+    };
+
+    return Ok(latest_num);
 }
 
 // Create a new system generation based on the user generation.
