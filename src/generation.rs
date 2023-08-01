@@ -292,8 +292,31 @@ pub fn list_print() -> Result<(), io::Error> {
     return Ok(());
 }
 
+// Get only list vector generation names.
+fn get_list_vector_names(list_vec: &Vec<(String, String, bool)>) -> Vec<String> {
+    let mut new_vec: Vec<String> = Vec::new();
+
+    for i in list_vec.iter() {
+        new_vec.push(i.0.to_string());
+    }
+
+    return new_vec;
+}
+
 // Sort list vector.
 fn sort_list_vector(list_vec: &Vec<(String, String, bool)>) -> Result<Vec<(String, String, bool)>, io::Error> {
+    if list_vec.len() == 0 {
+        return Ok(list_vec.clone());
+    }
+
+    let list_vec_names = get_list_vector_names(&list_vec);
+
+    let mut min_spot: usize = 0;
+
+    while list_vec_names.contains(&min_spot.to_string()) == false {
+        min_spot += 1;
+    }
+
     let mut new_vec: Vec<(String, String, bool)> = Vec::new();
 
     while new_vec.len() != list_vec.len() {
@@ -306,7 +329,7 @@ fn sort_list_vector(list_vec: &Vec<(String, String, bool)>) -> Result<Vec<(Strin
                 },
             };
 
-            if i_num == new_vec.len() + 1 {
+            if i_num == new_vec.len() + min_spot {
                 new_vec.push(i.clone());
             }
         }
