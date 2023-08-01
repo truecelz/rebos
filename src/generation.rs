@@ -266,7 +266,18 @@ pub fn list_print() -> Result<(), io::Error> {
         Err(e) => return Err(e),
     };
 
-    for i in list_items.iter() {
+    let list_items_sorted = match sort_list_vector(&list_items) {
+        Ok(o) => o,
+        Err(e) => return Err(e),
+    };
+
+    let mut max_digits: usize = 0;
+
+    if list_items_sorted.len() > 0 {
+        max_digits = list_items_sorted[list_items_sorted.len() - 1].0.to_string().trim().len();
+    }
+
+    for i in list_items_sorted.iter() {
         let misc_text: String;
 
         if i.2 {
@@ -276,9 +287,33 @@ pub fn list_print() -> Result<(), io::Error> {
         }
 
         generic!("{} ... ({}){}", i.0, i.1, misc_text);
+        generic!("MD: {}", max_digits);
     }
 
     return Ok(());
+}
+
+// Sort list vector.
+fn sort_list_vector(list_vec: &Vec<(String, String, bool)>) -> Result<Vec<(String, String, bool)>, io::Error> {
+    let mut new_vec: Vec<(String, String, bool)> = Vec::new();
+
+    while new_vec.len() != list_vec.len() {
+        for i in list_vec.iter() {
+            let i_num: usize = match i.0.trim().parse() {
+                Ok(o) => o,
+                Err(_e) => {
+                    error!("Failed to parse invalid generation name! ({})", i.0);
+                    return Err(custom_error("Failed to parse invalid generation name!"));
+                },
+            };
+
+            if i_num == new_vec.len() + 1 {
+                new_vec.push(i.clone());
+            }
+        }
+    }
+
+    return Ok(new_vec);
 }
 
 // Get the 'current' generation TOML file.
