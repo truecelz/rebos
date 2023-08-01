@@ -287,7 +287,6 @@ pub fn list_print() -> Result<(), io::Error> {
         }
 
         generic!("{} ... ({}){}", i.0, i.1, misc_text);
-        generic!("MD: {}", max_digits);
     }
 
     return Ok(());
