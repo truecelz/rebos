@@ -286,7 +286,13 @@ pub fn list_print() -> Result<(), io::Error> {
             misc_text = "".to_string();
         }
 
-        generic!("{} ... ({}){}", i.0, i.1, misc_text);
+        let mut tabbed = String::new();
+
+        for _j in 0..(max_digits - i.0.trim().len()) {
+            tabbed.push_str(" ");
+        }
+
+        generic!("{}{} ... ({}){}", tabbed, i.0, i.1, misc_text);
     }
 
     return Ok(());
