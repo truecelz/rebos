@@ -1,9 +1,9 @@
 #![allow(dead_code)]
 
-use serde::Deserialize;
 use std::io;
 use crate::places;
 use crate::generation;
+use crate::generation::Generation;
 use crate::log::*;
 use crate::{info, error, warning, note};
 use crate::filesystem::*;
@@ -31,14 +31,6 @@ flatpak_repos = [
     # [\"flathub\", \"https://flathub.org/repo/flathub.flatpakrepo\"],
 ]
 ";
-
-// The structure for a generation.
-#[derive(Deserialize, Debug)]
-pub struct Generation {
-    pkgs: Vec<String>,
-    flatpaks: Vec<String>,
-    flatpak_repos: Vec<(String, String)>,
-}
 
 // This determinds if a function should
 // use the files from the user's config,

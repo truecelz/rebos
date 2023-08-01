@@ -10,6 +10,7 @@ mod repeated;
 mod config;
 mod dir;
 mod utils;
+mod obj_print;
 
 // Import stuff from source files and crates.
 use clap::Parser;
@@ -120,7 +121,7 @@ fn app() -> ExitCode {
                 Err(_e) => return ExitCode::Fail,
             };
 
-            info!("User-Side Generation: {:?}", generation);
+            obj_print::generation(&generation);
         },
         cli::Commands::InitConfig { force } => {
             info!("Creating user configuration...");

@@ -3,6 +3,7 @@
 use std::io;
 use colored::Colorize;
 
+use serde::Deserialize;
 use crate::filesystem::*;
 use crate::places;
 use crate::log::*;
@@ -10,6 +11,14 @@ use crate::{info, error, debug, generic};
 use crate::library::*;
 use crate::config;
 use crate::config::{Config, ConfigSide};
+
+// The structure for a generation.
+#[derive(Deserialize, Debug)]
+pub struct Generation {
+    pub pkgs: Vec<String>,
+    pub flatpaks: Vec<String>,
+    pub flatpak_repos: Vec<(String, String)>,
+}
 
 // Get latest generation number.
 fn latest_number() -> Result<usize, io::Error> {
