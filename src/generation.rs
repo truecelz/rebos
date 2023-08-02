@@ -7,7 +7,7 @@ use serde::Deserialize;
 use crate::filesystem::*;
 use crate::places;
 use crate::log::*;
-use crate::{info, error, debug, generic};
+use crate::{info, warning, error, debug, generic};
 use crate::library::*;
 use crate::config;
 use crate::config::{Config, ConfigSide};
@@ -192,6 +192,108 @@ pub fn get_current() -> Result<usize, io::Error> {
     return Ok(generation);
 }
 
+// Get the currently built generation number.
+pub fn get_built() -> Result<usize, io::Error> {
+    let contents = match read_file(format!("{}/built", places::gens()).as_str()) {
+        Ok(o) => o,
+        Err(e) => {
+            error!("Failed to read 'built' file!");
+            return Err(e);
+        },
+    };
+
+    let generation: usize = match contents.trim().parse() {
+        Ok(o) => o,
+        Err(_e) => {
+            error!("Failed to parse number from 'built' file! (Maybe 'built' file is corrupted?)");
+            return Err(custom_error("Failed to parse number out of 'built' file!"));
+        },
+    };
+
+    return Ok(generation);
+}
+
+// Has a generation been built yet?
+pub fn been_built() -> bool {
+    return path_exists(format!("{}/built", places::gens()).as_str());
+}
+
+// Delete old generations.
+pub fn delete_old(how_many: usize) -> Result<(), io::Error> {
+    let offset = match get_oldest() {
+        Ok(o) => o,
+        Err(e) => return Err(e),
+    };
+
+    for i in offset..(how_many + offset) {
+        match delete(i) {
+            Ok(_o) => {}, // This is a rare instance where the matched function actually did the info!() itself!
+            Err(e) => return Err(e),
+        };
+    }
+
+    return Ok(());
+}
+
+// Delete a specific generation.
+pub fn delete(generation: usize) -> Result<(), io::Error> {
+    if match is_current(generation) {
+        Ok(o) => o,
+        Err(e) => return Err(e),
+    } {
+        warning!("Could not delete generation {}, because it is the 'current' generation, and is protected!", generation);
+        return Ok(());
+    }
+
+    if been_built() {
+        if match is_built(generation) {
+            Ok(o) => o,
+            Err(e) => return Err(e),
+        } {
+            warning!("Could not delete generation {}, because it is the currently built generation, and is protected!", generation);
+            return Ok(());
+        }
+    }
+
+    match remove_directory(format!("{}/{}", places::gens(), generation).as_str()) {
+        Ok(_o) => info!("Deleted generation: {}", generation),
+        Err(e) => {
+            error!("Failed to delete generation: {}", generation);
+            return Err(e);
+        },
+    };
+
+    return Ok(());
+}
+
+// Return true or false based on if the given generation is the 'current' generation.
+pub fn is_current(generation: usize) -> Result<bool, io::Error> {
+    if generation == match get_current() {
+        Ok(o) => o,
+        Err(e) => return Err(e),
+    } {
+        return Ok(true);
+    }
+
+    else {
+        return Ok(false);
+    }
+}
+
+// Return true or false based on if the given generation is the built generation.
+pub fn is_built(generation: usize) -> Result<bool, io::Error> {
+    if generation == match get_built() {
+        Ok(o) => o,
+        Err(e) => return Err(e),
+    } {
+        return Ok(true);
+    }
+
+    else {
+        return Ok(false);
+    }
+}
+
 // List all generations. (NORMAL)
 pub fn list() -> Result<Vec<(String, String, bool)>, io::Error> {
     return list_core(true);
@@ -330,7 +432,7 @@ fn sort_list_vector(list_vec: &Vec<(String, String, bool)>) -> Result<Vec<(Strin
             let i_num: usize = match i.0.trim().parse() {
                 Ok(o) => o,
                 Err(_e) => {
-                    error!("Failed to parse invalid generation name! ({})", i.0);
+                    error!("Failed to parse invalid generation name! ({})", i.0.trim());
                     return Err(custom_error("Failed to parse invalid generation name!"));
                 },
             };
@@ -342,6 +444,34 @@ fn sort_list_vector(list_vec: &Vec<(String, String, bool)>) -> Result<Vec<(Strin
     }
 
     return Ok(new_vec);
+}
+
+// Get oldest generation name.
+pub fn get_oldest() -> Result<usize, io::Error> {
+    let gen_names = get_list_vector_names(&match sort_list_vector(&match list_with_no_calls() {
+        Ok(o) => o,
+        Err(e) => return Err(e),
+    }) {
+        Ok(o) => o,
+        Err(e) => return Err(e),
+    });
+
+    if gen_names.len() == 0 {
+        error!("Tried to call generation::get_oldest(), when there are no generations!");
+        return Err(custom_error("Not enough generations!"));
+    }
+
+    let oldest_name = gen_names[0].to_string();
+
+    let oldest_number: usize = match oldest_name.trim().parse() {
+        Ok(o) => o,
+        Err(_e) => {
+            error!("Failed to parse invalid generation name! ({})", oldest_name.trim());
+            return Err(custom_error("Failed to parse invalid generation name!"));
+        },
+    };
+
+    return Ok(oldest_number);
 }
 
 // Get the 'current' generation TOML file.

@@ -75,6 +75,7 @@ fn app() -> ExitCode {
         },
         cli::Commands::Build => {
             info!("Building 'current' generation...");
+
             match generation::build() {
                 Ok(_o) => info!("Built generation successfully!"),
                 Err(_e) => return ExitCode::Fail,
@@ -82,6 +83,7 @@ fn app() -> ExitCode {
         },
         cli::Commands::Rollback(r) => {
             info!("Rolling back by {} generations...", r.by);
+
             match generation::rollback(r.by) {
                 Ok(_o) => info!("Rolled back successfully!"),
                 Err(_e) => return ExitCode::Fail,
@@ -89,6 +91,7 @@ fn app() -> ExitCode {
         },
         cli::Commands::Latest => {
             info!("Jumping to latest generation...");
+
             match generation::latest() {
                 Ok(_o) => info!("Jumped to latest successfully!"),
                 Err(_e) => return ExitCode::Fail,
@@ -96,6 +99,7 @@ fn app() -> ExitCode {
         },
         cli::Commands::SetCurrent(s) => {
             info!("Jumping to generation {}...", s.to);
+
             match generation::set_current(s.to) {
                 Ok(_o) => info!("Jumped to generation {} successfully!", s.to),
                 Err(_e) => return ExitCode::Fail,
@@ -125,6 +129,7 @@ fn app() -> ExitCode {
         },
         cli::Commands::InitConfig { force } => {
             info!("Creating user configuration...");
+
             match config::init_user_config(*force) {
                 Ok(_o) => info!("Created user configuration successfully!"),
                 Err(_e) => return ExitCode::Fail,
@@ -135,6 +140,14 @@ fn app() -> ExitCode {
                 Ok(o) => o,
                 Err(_e) => return ExitCode::Fail,
             });
+        },
+        cli::Commands::DeleteOld(h) => {
+            info!("Deleting old generations...");
+
+            match generation::delete_old(h.how_many) {
+                Ok(_o) => info!("Successfully deleted {} generations!", h.how_many),
+                Err(_e) => return ExitCode::Fail,
+            };
         },
         _ => {
             error!("Command not usable yet!");

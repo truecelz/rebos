@@ -37,15 +37,25 @@ pub enum Commands {
     },
     /// Print out what the latest generation number is.
     WhatIsLatest,
+    /// Delete older generations.
+    DeleteOld(DeleteOld),
+}
+
+#[derive(Parser, Debug)]
+pub struct DeleteOld {
+    /// Starting at the oldest generation, how many should be deleted?
+    pub how_many: usize,
 }
 
 #[derive(Parser, Debug)]
 pub struct Commit {
+    /// The commit message shows up in the list command.
     pub msg: String,
 }
 
 #[derive(Parser, Debug)]
 pub struct SetCurrent {
+    /// Generation to jump to.
     pub to: usize,
 }
 
