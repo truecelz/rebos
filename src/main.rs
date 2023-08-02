@@ -1,16 +1,15 @@
 // Source files to include.
-mod library;
-mod convert;
-mod filesystem;
-mod places;
-mod cli;
-mod log;
-mod generation;
-mod repeated;
-mod config;
-mod dir;
-mod utils;
-mod obj_print;
+mod library; // Full of functions.
+mod convert; // Convert one type to another type.
+mod filesystem; // Functions for interacting with the filesystem.
+mod places; // Where is stuff stored?
+mod cli; // For argument parsing and command structuring.
+mod log; // Contains macros and stuff for pretty output messages in the terminal!
+mod generation; // The generations system.
+mod repeated; // Used for repeated code.
+mod config; // Configuration stuff.
+mod dir; // Interfacing with the dirs crate.
+mod obj_print; // Print objects.
 
 // Import stuff from source files and crates.
 use clap::Parser;

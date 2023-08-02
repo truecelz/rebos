@@ -16,6 +16,18 @@ pub struct History {
     pub line: String,
 }
 
+pub fn cut(full: &str, fword: u32, dword: char) -> String {
+    let vecced = str_to_string_vec(full, dword.to_string().as_str());
+
+    let fspot = fword - 1;
+
+    if vecced.len() < fword as usize {
+        return String::from("");
+    }
+
+    return vecced[fspot as usize].to_string();
+}
+
 pub fn name_from_path(path: &str) -> String {
     let converted = str_to_string_vec(path, "/");
 
