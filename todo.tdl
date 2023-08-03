@@ -1,10 +1,10 @@
-[ ] >> Fix various bugs with listing, and deleting!
+[*] >> Fix various bugs with listing, and deleting!
 [*] >> List.
 [*] >> Commit.
 [*] >> Set Current.
 [*] >> Latest.
 [*] >> Rollback.
-[ ] >> TrashOld.
+[*] >> DeleteOld.
 [ ] >> Build.
 [*] >> Improve the latest_number() function so that deleting older generations doesn't mess stuff up!
 [*] >> Improve the output of gen-info! It really needs a makeover!

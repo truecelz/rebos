@@ -419,26 +419,34 @@ fn sort_list_vector(list_vec: &Vec<(String, String, bool)>) -> Result<Vec<(Strin
 
     let list_vec_names = get_list_vector_names(&list_vec);
 
-    let mut min_spot: usize = 0;
+    let mut list_vec_nums: Vec<usize> = Vec::new();
 
-    while list_vec_names.contains(&min_spot.to_string()) == false {
-        min_spot += 1;
+    for i in list_vec_names.iter() {
+        list_vec_nums.push(match i.trim().parse() {
+            Ok(o) => o,
+            Err(_e) => {
+                error!("Failed to parse invalid generation name! ({})", i.trim());
+                return Err(custom_error("Failed to parse invalid generation name!"));
+            },
+        });
     }
+
+    list_vec_nums.sort();
 
     let mut new_vec: Vec<(String, String, bool)> = Vec::new();
 
-    while new_vec.len() != list_vec.len() {
-        for i in list_vec.iter() {
-            let i_num: usize = match i.0.trim().parse() {
+    for i in list_vec_nums.iter() {
+        for j in list_vec.iter() {
+            let j_num: usize = match j.0.trim().parse() {
                 Ok(o) => o,
                 Err(_e) => {
-                    error!("Failed to parse invalid generation name! ({})", i.0.trim());
+                    error!("Failed to parse invalid generation name! ({})", j.0.trim());
                     return Err(custom_error("Failed to parse invalid generation name!"));
                 },
             };
 
-            if i_num == new_vec.len() + min_spot {
-                new_vec.push(i.clone());
+            if &j_num == i {
+                new_vec.push(j.clone());
             }
         }
     }
