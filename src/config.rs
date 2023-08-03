@@ -32,6 +32,31 @@ flatpak_repos = [
 ]
 ";
 
+const DEFAULT_PACKAGE_MANAGER_CONFIG: &str =
+"# ----------------------------------- #
+#    Package Manager Configuration    #
+# ----------------------------------- #
+
+# Make sure to enter the exact command you use as the normal user!
+# That means including 'sudo' or 'doas' or whatever if the command needs it.
+# Where you would put packages, enter '#:?'.
+
+# Example: install = \"sudo apt install #:?\"
+
+install = \"\" # Example: sudo apt install #:?
+remove = \"\" # Example: sudo apt remove #:?
+sync = \"\" # Example: sudo apt update
+upgrade = \"\" # Example: sudo apt upgrade
+
+# ------------------------------- #
+#    Additional configuration.    #
+# ------------------------------- #
+
+# many_pkg_args = BOOL: Can you supply many packages as an argument? Example: 'sudo apt install git vim wget'
+
+config = { many_pkg_args = true }
+";
+
 // This determinds if a function should
 // use the files from the user's config,
 // or from the base() directory.
@@ -78,6 +103,7 @@ pub fn init_user_config(force: bool) -> Result<(), io::Error> {
 
     let files = vec![
         (DEFAULT_USER_GEN, config::config_for(Config::Generation, ConfigSide::User)),
+        (DEFAULT_PACKAGE_MANAGER_CONFIG, format!("{}/pkg_manager.toml", places::base_user())),
     ];
 
     for i in files.iter() {
@@ -106,7 +132,8 @@ pub fn gen(side: ConfigSide) -> Result<Generation, io::Error> {
         Err(e) => {
             error!("Failed to parse generation TOML file!");
             error!("TOML Error: {:?}", e);
-            return Err(custom_error("Failed to parse generation TOML file!"));
+
+            return Err(custom_error("Failed to parse TOML file!"));
         },
     };
 

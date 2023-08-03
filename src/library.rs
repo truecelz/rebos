@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 use std::io;
+use std::process::Command;
 use colored::Colorize;
 use users::get_current_username;
 use crate::convert::*;
@@ -16,6 +17,13 @@ pub struct History {
     pub line: String,
 }
 
+pub fn run_command(command: &str) -> bool {
+    return match Command::new("bash").args(["-c", command]).status() {
+        Ok(o) => o,
+        Err(_e) => return false,
+    }.success();
+}
+
 pub fn cut(full: &str, fword: u32, dword: char) -> String {
     let vecced = str_to_string_vec(full, dword.to_string().as_str());
 
@@ -26,6 +34,26 @@ pub fn cut(full: &str, fword: u32, dword: char) -> String {
     }
 
     return vecced[fspot as usize].to_string();
+}
+
+pub fn sed(full: &str, replace: &str, with: &str) -> String {
+    let mut phrase_vec: Vec<String> = Vec::new();
+
+    for i in full.split(replace) {
+        phrase_vec.push(i.to_string());
+    }
+
+    let mut phrase = String::new();
+
+    for i in 0..phrase_vec.len() {
+        phrase.push_str(phrase_vec[i].as_str());
+
+        if i < phrase_vec.len() - 1 {
+            phrase.push_str(with);
+        }
+    }
+
+    return phrase;
 }
 
 pub fn name_from_path(path: &str) -> String {

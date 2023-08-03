@@ -10,6 +10,7 @@ mod repeated; // Used for repeated code.
 mod config; // Configuration stuff.
 mod dir; // Interfacing with the dirs crate.
 mod obj_print; // Print objects.
+mod package_management; // Stuff related to package management.
 
 // Import stuff from source files and crates.
 use clap::Parser;
