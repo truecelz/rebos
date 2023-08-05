@@ -6,6 +6,7 @@
 [*] >> Rollback.
 [*] >> DeleteOld.
 [ ] >> Build.
+[ ] >> Add machine-specific gen.toml file support.
 [*] >> Improve the latest_number() function so that deleting older generations doesn't mess stuff up!
 [*] >> Improve the output of gen-info! It really needs a makeover!
 [*] >> Sort list output.
