@@ -447,6 +447,7 @@ fn sort_list_vector(list_vec: &Vec<(String, String, bool)>) -> Result<Vec<(Strin
 
             if &j_num == i {
                 new_vec.push(j.clone());
+                break;
             }
         }
     }
