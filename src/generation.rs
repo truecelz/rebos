@@ -17,10 +17,20 @@ use crate::system;
 use crate::flatpak;
 
 // The structure for a generation.
-#[derive(Deserialize, Debug)]
+#[derive(PartialEq, Deserialize, Debug)]
+#[serde(deny_unknown_fields, default)]
 pub struct Generation {
     pub pkgs: Vec<String>,
     pub flatpaks: Vec<String>,
+}
+
+impl Default for Generation {
+    fn default() -> Generation {
+        return Generation {
+            pkgs: Vec::new(),
+            flatpaks: Vec::new(),
+        };
+    }
 }
 
 impl GenerationUtils for Generation {
