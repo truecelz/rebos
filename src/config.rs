@@ -6,6 +6,7 @@ use crate::generation;
 use crate::log::*;
 use crate::{info, error};
 use crate::filesystem::*;
+use crate::library::*;
 use crate::config;
 use crate::system;
 
@@ -23,11 +24,6 @@ pkgs = [
 # Packages to be installed via Flatpak.
 flatpaks = [
     # \"flatseal\",
-]
-
-# Flatpak repositories.
-flatpak_repos = [
-    # [\"flathub\", \"https://flathub.org/repo/flathub.flatpakrepo\"],
 ]
 ";
 
@@ -120,7 +116,14 @@ pub fn config_for(config: Config, side: ConfigSide) -> String {
     return match config {
         Config::Generation => match side {
             ConfigSide::User => format!("{}/gen.toml", places::base_user()),
-            ConfigSide::System => generation::current_gen(),
+            ConfigSide::System => match generation::current_gen() {
+                Ok(o) => o,
+                Err(_e) => {
+                    error!("Failed to get config path for system generation!");
+                    abort();
+                    return String::from("Hidden string. UwU");
+                },
+            },
         },
     };
 }

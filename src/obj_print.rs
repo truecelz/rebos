@@ -14,9 +14,4 @@ pub fn generation(gen: &Generation) {
     for i in gen.flatpaks.iter() {
         generic!("{}", i);
     }
-
-    info!("Flatpak Repos:");
-    for i in gen.flatpak_repos.iter() {
-        generic!("Name: {}, URL: {}", i.0, i.1);
-    }
 }

@@ -17,6 +17,10 @@ pub struct History {
     pub line: String,
 }
 
+pub fn abort() { // Try not to use this function!
+    std::process::exit(1);
+}
+
 pub fn run_command(command: &str) -> bool {
     return match Command::new("bash").args(["-c", command]).status() {
         Ok(o) => o,

@@ -3,29 +3,30 @@
 use std::io;
 use colored::Colorize;
 use serde::Deserialize;
+use crate::convert::*;
 use crate::filesystem::*;
 use crate::places;
 use crate::log::*;
-use crate::{info, warning, error, debug, generic};
 use crate::library::*;
+use crate::package_management::*;
+use crate::{info, warning, error, generic, note};
 use crate::config;
 use crate::config::{Config, ConfigSide};
 use crate::config::config_for;
 use crate::system;
+use crate::flatpak;
 
 // The structure for a generation.
 #[derive(Deserialize, Debug)]
 pub struct Generation {
     pub pkgs: Vec<String>,
     pub flatpaks: Vec<String>,
-    pub flatpak_repos: Vec<(String, String)>,
 }
 
 impl GenerationUtils for Generation {
     fn extend(&mut self, other_gen: Generation) {
         self.pkgs.extend(other_gen.pkgs);
         self.flatpaks.extend(other_gen.flatpaks);
-        self.flatpak_repos.extend(other_gen.flatpak_repos);
     }
 }
 
@@ -164,7 +165,106 @@ pub fn commit(msg: &str) -> Result<(), io::Error> {
 
 // Build the 'current' system generation.
 pub fn build() -> Result<(), io::Error> {
-    debug!("Please work on generation::build()!");
+
+    let current_num = match get_current() {
+        Ok(o) => o,
+        Err(e) => return Err(e),
+    };
+
+    let curr_gen = match gen(ConfigSide::System) {
+        Ok(o) => o,
+        Err(e) => return Err(e),
+    };
+
+    match read_file(format!("{}/built", places::gens()).as_str()) {
+        Ok(o) => {
+            let built_gen = match read_to_gen(format!("{}/{}/gen.toml", places::gens(), o.trim()).as_str()) {
+                Ok(o) => o,
+                Err(e) => return Err(e),
+            };
+
+            let built_pkgs_string = string_vec_to_string(&built_gen.pkgs, "\n");
+            let curr_pkgs_string = string_vec_to_string(&curr_gen.pkgs, "\n");
+
+            let built_flatpaks_string = string_vec_to_string(&built_gen.flatpaks, "\n");
+            let curr_flatpaks_string = string_vec_to_string(&curr_gen.flatpaks, "\n");
+
+            let pkgs_diffs = history(&built_pkgs_string, &curr_pkgs_string);
+            let flatpaks_diffs = history(&built_flatpaks_string, &curr_flatpaks_string);
+
+            let mut pkgs_to_install: Vec<String> = Vec::new();
+            let mut pkgs_to_remove: Vec<String> = Vec::new();
+
+            let mut flatpaks_to_install: Vec<String> = Vec::new();
+            let mut flatpaks_to_remove: Vec<String> = Vec::new();
+
+            for i in pkgs_diffs.iter() {
+                match i.mode {
+                    HistoryMode::Add => pkgs_to_install.push(i.line.to_string()),
+                    HistoryMode::Remove => pkgs_to_remove.push(i.line.to_string()),
+                };
+            }
+
+            for i in flatpaks_diffs.iter() {
+                match i.mode {
+                    HistoryMode::Add => flatpaks_to_install.push(i.line.to_string()),
+                    HistoryMode::Remove => flatpaks_to_remove.push(i.line.to_string()),
+                };
+            }
+
+            match install(&pkgs_to_install) {
+                Ok(_o) => {},
+                Err(e) => return Err(e),
+            };
+
+            match uninstall(&pkgs_to_remove) {
+                Ok(_o) => {},
+                Err(e) => return Err(e),
+            };
+
+            match flatpak::install(&flatpaks_to_install) {
+                Ok(_o) => {},
+                Err(e) => return Err(e),
+            };
+
+            match flatpak::uninstall(&flatpaks_to_remove) {
+                Ok(_o) => {},
+                Err(e) => return Err(e),
+            };
+
+            println!("");
+
+            info!("#################");
+            info!("#    SUMMARY    #");
+            info!("#################");
+
+            println!("");
+
+            info!("Packages:");
+            print_history(&pkgs_diffs);
+
+            info!("Flatpaks:");
+            print_history(&flatpaks_diffs);
+        },
+        Err(_e) => {
+            match install(&curr_gen.pkgs) {
+                Ok(_o) => {},
+                Err(e) => return Err(e),
+            };
+
+            match flatpak::install(&curr_gen.flatpaks) {
+                Ok(_o) => {},
+                Err(e) => return Err(e),
+            };
+
+            note!("This output will look slightly different than when you run this command again, because this is your first time building a generation on this system.");
+        },
+    };
+
+    match set_built(current_num) {
+        Ok(_o) => {},
+        Err(e) => return Err(e),
+    };
 
     return Ok(());
 }
@@ -221,6 +321,33 @@ pub fn set_current(to: usize) -> Result<(), io::Error> {
         },
         Err(e) => {
             error!("Failed to create/write 'current' tracking file!");
+            return Err(e);
+        },
+    };
+}
+
+// Set the 'built' generation to a specific generation.
+pub fn set_built(to: usize) -> Result<(), io::Error> {
+    if to > match latest_number() {
+        Ok(o) => o,
+        Err(e) => return Err(e),
+    } {
+        error!("Out of range! Too high!");
+        return Err(custom_error("Out of range!"));
+    }
+
+    if to < 1 {
+        error!("Out of range! Too low!");
+        return Err(custom_error("Out of range!"));
+    }
+
+    match write_file(to.to_string().trim(), format!("{}/built", places::gens()).as_str()) {
+        Ok(_o) => {
+            info!("Set 'built' to: {}", to);
+            return Ok(());
+        },
+        Err(e) => {
+            error!("Failed to create/write 'built' tracking file!");
             return Err(e);
         },
     };
@@ -350,17 +477,17 @@ pub fn is_built(generation: usize) -> Result<bool, io::Error> {
 }
 
 // List all generations. (NORMAL)
-pub fn list() -> Result<Vec<(String, String, bool)>, io::Error> {
+pub fn list() -> Result<Vec<(String, String, bool, bool)>, io::Error> {
     return list_core(true);
 }
 
 // List all generations. (ISOLATED MODE | For avoiding errors with called un-needed functions!)
-pub fn list_with_no_calls() -> Result<Vec<(String, String, bool)>, io::Error> {
+pub fn list_with_no_calls() -> Result<Vec<(String, String, bool, bool)>, io::Error> {
     return list_core(false);
 }
 
 // List all generations. (CORE)
-fn list_core(calls: bool) -> Result<Vec<(String, String, bool)>, io::Error> {
+fn list_core(calls: bool) -> Result<Vec<(String, String, bool, bool)>, io::Error> {
     let gen_listed = match list_directory(places::gens().as_str()) {
         Ok(o) => o,
         Err(e) => {
@@ -382,7 +509,7 @@ fn list_core(calls: bool) -> Result<Vec<(String, String, bool)>, io::Error> {
         };
     }
 
-    let mut gens_with_info: Vec<(String, String, bool)> = Vec::new();
+    let mut gens_with_info: Vec<(String, String, bool, bool)> = Vec::new();
 
     for i in generations.iter() {
         let generation_name = name_from_path(i);
@@ -392,17 +519,24 @@ fn list_core(calls: bool) -> Result<Vec<(String, String, bool)>, io::Error> {
         };
 
         let current_number: usize;
+        let built_number: usize;
 
         if calls == true {
             current_number = match get_current() {
                 Ok(o) => o,
                 Err(e) => return Err(e),
             };
+            built_number = match get_built() {
+                Ok(o) => o,
+                Err(_e) => 0,
+            };
         } else {
             current_number = 0;
+            built_number = 0;
         }
 
         let is_current: bool;
+        let is_built: bool;
 
         if generation_name == current_number.to_string() {
             is_current = true;
@@ -410,7 +544,13 @@ fn list_core(calls: bool) -> Result<Vec<(String, String, bool)>, io::Error> {
             is_current = false;
         }
 
-        gens_with_info.push((generation_name, commit_msg, is_current));
+        if generation_name == built_number.to_string() {
+            is_built = true;
+        } else {
+            is_built = false;
+        }
+
+        gens_with_info.push((generation_name, commit_msg, is_current, is_built));
     }
 
     return Ok(gens_with_info);
@@ -435,12 +575,14 @@ pub fn list_print() -> Result<(), io::Error> {
     }
 
     for i in list_items_sorted.iter() {
-        let misc_text: String;
+        let mut misc_text = String::new();
 
         if i.2 {
-            misc_text = format!(" {}{}{}", "[".bright_black().bold(), "CURRENT".bright_green().bold(), "]".bright_black().bold());
-        } else {
-            misc_text = "".to_string();
+            misc_text.push_str(format!(" {}{}{}", "[".bright_black().bold(), "CURRENT".bright_green().bold(), "]".bright_black().bold()).as_str());
+        }
+
+        if i.3 {
+            misc_text.push_str(format!(" {}{}{}", "[".bright_black().bold(), "BUILT".bright_yellow().bold(), "]".bright_black().bold()).as_str());
         }
 
         let mut tabbed = String::new();
@@ -456,7 +598,7 @@ pub fn list_print() -> Result<(), io::Error> {
 }
 
 // Get only list vector generation names.
-fn get_list_vector_names(list_vec: &Vec<(String, String, bool)>) -> Vec<String> {
+fn get_list_vector_names(list_vec: &Vec<(String, String, bool, bool)>) -> Vec<String> {
     let mut new_vec: Vec<String> = Vec::new();
 
     for i in list_vec.iter() {
@@ -467,7 +609,7 @@ fn get_list_vector_names(list_vec: &Vec<(String, String, bool)>) -> Vec<String> 
 }
 
 // Sort list vector.
-fn sort_list_vector(list_vec: &Vec<(String, String, bool)>) -> Result<Vec<(String, String, bool)>, io::Error> {
+fn sort_list_vector(list_vec: &Vec<(String, String, bool, bool)>) -> Result<Vec<(String, String, bool, bool)>, io::Error> {
     if list_vec.len() == 0 {
         return Ok(list_vec.clone());
     }
@@ -488,7 +630,7 @@ fn sort_list_vector(list_vec: &Vec<(String, String, bool)>) -> Result<Vec<(Strin
 
     list_vec_nums.sort();
 
-    let mut new_vec: Vec<(String, String, bool)> = Vec::new();
+    let mut new_vec: Vec<(String, String, bool, bool)> = Vec::new();
 
     for i in list_vec_nums.iter() {
         for j in list_vec.iter() {
@@ -539,9 +681,11 @@ pub fn get_oldest() -> Result<usize, io::Error> {
 }
 
 // Get the 'current' generation TOML file.
-pub fn current_gen() -> String {
-    let current = read_file(format!("{}/current", places::gens()).as_str()).unwrap();
-    let current = current.trim();
+pub fn current_gen() -> Result<String, io::Error> {
+    let current = match get_current() {
+        Ok(o) => o,
+        Err(e) => return Err(e),
+    };
 
-    return format!("{}/{}/gen.toml", places::gens(), current);
+    return Ok(format!("{}/{}/gen.toml", places::gens(), current));
 }

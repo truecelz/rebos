@@ -8,7 +8,7 @@ use crate::filesystem::*;
 use crate::convert::*;
 use crate::log::*;
 use crate::places;
-use crate::error;
+use crate::{info, error};
 
 #[derive(Deserialize, Debug)]
 struct PackageManager {
@@ -46,16 +46,16 @@ pub fn install(pkgs: &Vec<String>) -> Result<(), io::Error> {
     return package_management(PackageManagementMode::Install, &pkgs);
 }
 
-pub fn remove(pkgs: &Vec<String>) -> Result<(), io::Error> {
+pub fn uninstall(pkgs: &Vec<String>) -> Result<(), io::Error> {
     return package_management(PackageManagementMode::Remove, &pkgs);
 }
 
 pub fn sync() -> Result<(), io::Error> {
-    return package_management(PackageManagementMode::Sync, &vec![String::new()]);
+    return package_management(PackageManagementMode::Sync, &vec![String::from("A")]);
 }
 
 pub fn upgrade() -> Result<(), io::Error> {
-    return package_management(PackageManagementMode::Upgrade, &vec![String::new()]);
+    return package_management(PackageManagementMode::Upgrade, &vec![String::from("A")]);
 }
 
 fn get_package_manager() -> Result<PackageManager, io::Error> {
@@ -92,6 +92,14 @@ fn package_management(pmm: PackageManagementMode, pkgs: &Vec<String>) -> Result<
         false => pkgs.clone(),
     };
 
+    if pkg_stuff.len() == 0 {
+        return Ok(());
+    }
+
+    if pkg_stuff[0].trim() == "" {
+        return Ok(());
+    }
+
     for i in pkg_stuff.iter() {
         match run_command(match pmm {
             PackageManagementMode::Install => sed(package_manager.install.as_str(), "#:?", i),
@@ -106,6 +114,13 @@ fn package_management(pmm: PackageManagementMode, pkgs: &Vec<String>) -> Result<
             },
         };
     }
+
+    match pmm {
+        PackageManagementMode::Install => info!("Successfully installed packages!"),
+        PackageManagementMode::Remove => info!("Successfully removed packages!"),
+        PackageManagementMode::Sync => info!("Successfully synced repositories!"),
+        PackageManagementMode::Upgrade => info!("Successfully upgraded packages!"),
+    };
 
     return Ok(());
 }

@@ -12,6 +12,7 @@ mod dir; // Interfacing with the dirs crate.
 mod obj_print; // Print objects.
 mod package_management; // Stuff related to package management.
 mod system; // Used for getting system information.
+mod flatpak; // Way of interacting with the Flatpak packaging system.
 
 // Import stuff from source files and crates.
 use clap::Parser;
