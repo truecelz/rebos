@@ -2,7 +2,7 @@
 
 use std::io;
 use colored::Colorize;
-use serde::Deserialize;
+use serde::{Serialize, Deserialize};
 use crate::convert::*;
 use crate::filesystem::*;
 use crate::places;
@@ -10,14 +10,13 @@ use crate::log::*;
 use crate::library::*;
 use crate::package_management::*;
 use crate::{info, warning, error, generic, note};
-use crate::config;
 use crate::config::{Config, ConfigSide};
 use crate::config::config_for;
 use crate::system;
 use crate::flatpak;
 
 // The structure for a generation.
-#[derive(PartialEq, Deserialize, Debug)]
+#[derive(PartialEq, Serialize, Deserialize, Debug)]
 #[serde(deny_unknown_fields, default)]
 pub struct Generation {
     pub pkgs: Vec<String>,
@@ -140,19 +139,22 @@ pub fn commit(msg: &str) -> Result<(), io::Error> {
         },
     };
 
-    let user_gen: String = match read_file(config::config_for(Config::Generation, ConfigSide::User).as_str()) {
+    let user_gen = match gen(ConfigSide::User) {
         Ok(o) => o,
-        Err(e) => {
-            error!("Failed to read user generation file!");
-            error!("Exact Error: {:?}", e);
+        Err(e) => return Err(e),
+    };
 
-            return Err(e);
+    let user_gen_string = match toml::to_string(&user_gen) {
+        Ok(o) => o,
+        Err(_e) => {
+            error!("Failed to convert user generation to string!");
+            return Err(custom_error("Failed to convert user generation to string!"));
         },
     };
 
     let files = vec![
         (msg, format!("{}/commit", gen_dir)),
-        (user_gen.as_str(), format!("{}/gen.toml", gen_dir)),
+        (user_gen_string.as_str(), format!("{}/gen.toml", gen_dir)),
     ];
 
     for i in files.iter() {
