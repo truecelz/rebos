@@ -21,11 +21,7 @@ pub enum Commands {
     /// Run the program setup.
     Setup,
     /// Create a default Dister configuration.
-    InitConfig {
-        /// Forces the command to create the default config, even if it means overwriting.
-        #[clap(long)]
-        force: bool,
-    },
+    InitConfig,
 }
 
 #[derive(Subcommand, Debug)]

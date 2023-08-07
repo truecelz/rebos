@@ -11,6 +11,7 @@ mod config; // Configuration stuff.
 mod dir; // Interfacing with the dirs crate.
 mod obj_print; // Print objects.
 mod package_management; // Stuff related to package management.
+mod system; // Used for getting system information.
 
 // Import stuff from source files and crates.
 use clap::Parser;
@@ -82,7 +83,7 @@ fn app() -> ExitCode {
                     };
                 },
                 cli::GenCommands::Info => {
-                    let generation = match config::gen(ConfigSide::User) {
+                    let generation = match generation::gen(ConfigSide::User) {
                         Ok(o) => o,
                         Err(_e) => return ExitCode::Fail,
                     };
@@ -157,10 +158,10 @@ fn app() -> ExitCode {
                 Err(_e) => return ExitCode::Fail,
             };
         },
-        cli::Commands::InitConfig { force } => {
+        cli::Commands::InitConfig => {
             info!("Creating user configuration...");
 
-            match config::init_user_config(*force) {
+            match config::init_user_config() {
                 Ok(_o) => info!("Created user configuration successfully!"),
                 Err(_e) => return ExitCode::Fail,
             };

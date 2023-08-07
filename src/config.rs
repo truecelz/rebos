@@ -3,12 +3,11 @@
 use std::io;
 use crate::places;
 use crate::generation;
-use crate::generation::Generation;
 use crate::log::*;
-use crate::{info, error, warning, note};
+use crate::{info, error};
 use crate::filesystem::*;
-use crate::library::custom_error;
 use crate::config;
+use crate::system;
 
 // Constants
 const DEFAULT_USER_GEN: &str =
@@ -60,6 +59,7 @@ config = { many_pkg_args = true }
 // This determinds if a function should
 // use the files from the user's config,
 // or from the base() directory.
+#[derive(PartialEq, Clone, Copy)]
 pub enum ConfigSide {
     User,
     System,
@@ -71,73 +71,48 @@ pub enum Config {
 }
 
 // Create the user configuration.
-pub fn init_user_config(force: bool) -> Result<(), io::Error> {
-    if path_exists(places::base_user().as_str()) {
-        if force == false {
-            error!("The user configuration already exists, if you want to overwrite everything in your configuration, please use '--force'!");
-            note!("Forcing to overwrite will overwrite EVERYTHING!!! So, if you are just trying to re-generate one broken file, copy everything you want to keep out of the directory first!");
+pub fn init_user_config() -> Result<(), io::Error> {
+    let system_hostname = match system::hostname() {
+        Ok(o) => o,
+        Err(e) => return Err(e),
+    };
 
-            return Err(custom_error("Configuration already exists!"));
-        }
+    let directories = vec![
+        places::base_user(),
+        format!("{}/machines/{}", places::base_user(), system_hostname),
+    ];
 
-        else {
-            warning!("Overwriting existing configuration...");
-
-            match remove_directory(places::base_user().as_str()) {
-                Ok(_o) => info!("Removed directory: {}", places::base_user()),
+    for i in directories.iter() {
+        if path_exists(i) == false {
+            match create_directory(i) {
+                Ok(_o) => info!("Created directory: {}", i),
                 Err(e) => {
-                    error!("Failed to remove directory: {}", places::base_user());
+                    error!("Failed to create directory: {}", i);
                     return Err(e);
                 },
             };
         }
     }
 
-    match create_directory(places::base_user().as_str()) {
-        Ok(_o) => info!("Created directory: {}", places::base_user()),
-        Err(e) => {
-            error!("Failed to create directory: {}", places::base_user());
-            return Err(e);
-        },
-    };
-
     let files = vec![
         (DEFAULT_USER_GEN, config::config_for(Config::Generation, ConfigSide::User)),
+        (DEFAULT_USER_GEN, format!("{}/machines/{}/gen.toml", places::base_user(), system_hostname)),
         (DEFAULT_PACKAGE_MANAGER_CONFIG, format!("{}/pkg_manager.toml", places::base_user())),
     ];
 
     for i in files.iter() {
-        match write_file(i.0, i.1.as_str()) {
-            Ok(_o) => info!("Created file: {}", i.1),
-            Err(e) => {
-                error!("Failed to create file: {}", i.1);
-                return Err(e);
-            },
-        };
+        if path_exists(i.1.as_str()) == false {
+            match write_file(i.0, i.1.as_str()) {
+                Ok(_o) => info!("Created file: {}", i.1),
+                Err(e) => {
+                    error!("Failed to create file: {}", i.1);
+                    return Err(e);
+                },
+            };
+        }
     }
 
     return Ok(());
-}
-
-// Return generation structure for...
-pub fn gen(side: ConfigSide) -> Result<Generation, io::Error> {
-    let generation: Generation = match toml::from_str(match read_file(config_for(Config::Generation, side).as_str()) {
-        Ok(o) => o,
-        Err(e) => {
-            error!("Failed to read generation TOML file!");
-            return Err(e);
-        },
-    }.as_str()) {
-        Ok(o) => o,
-        Err(e) => {
-            error!("Failed to parse generation TOML file!");
-            error!("TOML Error: {:?}", e);
-
-            return Err(custom_error("Failed to parse TOML file!"));
-        },
-    };
-
-    return Ok(generation);
 }
 
 // Return path for a config file.

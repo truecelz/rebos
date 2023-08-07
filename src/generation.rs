@@ -2,7 +2,6 @@
 
 use std::io;
 use colored::Colorize;
-
 use serde::Deserialize;
 use crate::filesystem::*;
 use crate::places;
@@ -11,6 +10,8 @@ use crate::{info, warning, error, debug, generic};
 use crate::library::*;
 use crate::config;
 use crate::config::{Config, ConfigSide};
+use crate::config::config_for;
+use crate::system;
 
 // The structure for a generation.
 #[derive(Deserialize, Debug)]
@@ -18,6 +19,60 @@ pub struct Generation {
     pub pkgs: Vec<String>,
     pub flatpaks: Vec<String>,
     pub flatpak_repos: Vec<(String, String)>,
+}
+
+impl GenerationUtils for Generation {
+    fn extend(&mut self, other_gen: Generation) {
+        self.pkgs.extend(other_gen.pkgs);
+        self.flatpaks.extend(other_gen.flatpaks);
+        self.flatpak_repos.extend(other_gen.flatpak_repos);
+    }
+}
+
+pub trait GenerationUtils {
+    // Extend all of the fields from one Generation object to another, another being the caller.
+    fn extend(&mut self, other_gen: Generation);
+}
+
+// Return generation structure for...
+pub fn gen(side: ConfigSide) -> Result<Generation, io::Error> {
+    let mut generation = match read_to_gen(config_for(Config::Generation, side).as_str()) {
+        Ok(o) => o,
+        Err(e) => return Err(e),
+    };
+
+    let system_hostname = match system::hostname() {
+        Ok(o) => o,
+        Err(e) => return Err(e),
+    };
+
+    if side == ConfigSide::User {
+        generation.extend(match read_to_gen(format!("{}/machines/{}/gen.toml", places::base_user(), system_hostname).as_str()) {
+            Ok(o) => o,
+            Err(e) => return Err(e),
+        });
+    }
+
+    return Ok(generation);
+}
+
+// Read a file and return a Generation object.
+fn read_to_gen(path: &str) -> Result<Generation, io::Error> {
+    return Ok(match toml::from_str(match read_file(path) {
+        Ok(o) => o,
+        Err(e) => {
+            error!("Failed to read generation TOML file!");
+            return Err(e);
+        },
+    }.as_str()) {
+        Ok(o) => o,
+        Err(e) => {
+            error!("Failed to parse generation TOML file!");
+            error!("TOML Error: {:?}", e);
+
+            return Err(custom_error("Failed to parse TOML file!"));
+        },
+    });
 }
 
 // Get latest generation number.

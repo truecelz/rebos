@@ -5,4 +5,5 @@
 [*] >> Rollback.
 [*] >> DeleteOld.
 [ ] >> Build.
-[ ] >> Add machine-specific gen.toml file support.
+[*] >> Add machine-specific gen.toml file support.
+[ ] >> Make it so if a field in the gen.toml file is missing, the program fills it in with the blanks, and warns the user to add in those sections!
