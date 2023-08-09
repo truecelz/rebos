@@ -435,7 +435,16 @@ pub fn delete_old(how_many: usize) -> Result<(), io::Error> {
         Err(e) => return Err(e),
     };
 
+    let latest_gen = match latest_number() {
+        Ok(o) => o,
+        Err(e) => return Err(e),
+    };
+
     for i in offset..(how_many + offset) {
+        if i > latest_gen {
+            break;
+        }
+
         match delete(i) {
             Ok(_o) => {}, // This is a rare instance where the matched function actually did the info!() itself!
             Err(e) => return Err(e),
