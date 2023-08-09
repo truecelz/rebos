@@ -1,1 +1,2 @@
 [ ] >> Fix delete-old bug with a mysterious extra generation.
+[*] >> Fix extra built error output.

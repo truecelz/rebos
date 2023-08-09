@@ -386,12 +386,25 @@ pub fn get_current() -> Result<usize, io::Error> {
     return Ok(generation);
 }
 
-// Get the currently built generation number.
+// Get the currently built generation number. (With output.)
 pub fn get_built() -> Result<usize, io::Error> {
+    return get_built_core(true);
+}
+
+// Get the currently built generation number. (Without output.)
+pub fn get_built_no_output() -> Result<usize, io::Error> {
+    return get_built_core(false);
+}
+
+// Get the currently built generation number. (CORE)
+pub fn get_built_core(output: bool) -> Result<usize, io::Error> {
     let contents = match read_file(format!("{}/built", places::gens()).as_str()) {
         Ok(o) => o,
         Err(e) => {
-            error!("Failed to read 'built' file!");
+            if output {
+                error!("Failed to read 'built' file!");
+            }
+
             return Err(e);
         },
     };
@@ -399,7 +412,10 @@ pub fn get_built() -> Result<usize, io::Error> {
     let generation: usize = match contents.trim().parse() {
         Ok(o) => o,
         Err(_e) => {
-            error!("Failed to parse number from 'built' file! (Maybe 'built' file is corrupted?)");
+            if output {
+                error!("Failed to parse number from 'built' file! (Maybe 'built' file is corrupted?)");
+            }
+
             return Err(custom_error("Failed to parse number out of 'built' file!"));
         },
     };
@@ -538,7 +554,7 @@ fn list_core(calls: bool) -> Result<Vec<(String, String, bool, bool)>, io::Error
                 Ok(o) => o,
                 Err(e) => return Err(e),
             };
-            built_number = match get_built() {
+            built_number = match get_built_no_output() {
                 Ok(o) => o,
                 Err(_e) => 0,
             };
