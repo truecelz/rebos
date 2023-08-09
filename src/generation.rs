@@ -87,22 +87,10 @@ fn read_to_gen(path: &str) -> Result<Generation, io::Error> {
 
 // Get latest generation number.
 pub fn latest_number() -> Result<usize, io::Error> {
-    let gen_list = match list_with_no_calls() {
+    let generation_numbers = match list_gen_nums() {
         Ok(o) => o,
-        Err(e) => {
-            error!("Failed to get latest generation number!");
-            return Err(e);
-        },
+        Err(e) => return Err(e),
     };
-
-    let mut generation_numbers: Vec<usize> = Vec::new();
-
-    for i in gen_list.iter() {
-        generation_numbers.push(match usize_from_gen_name(i.0.as_str()) {
-            Ok(o) => o,
-            Err(e) => return Err(e),
-        });
-    }
 
     if generation_numbers.len() < 1 {
         return Ok(0);
