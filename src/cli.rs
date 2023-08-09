@@ -35,7 +35,9 @@ pub enum GenCommands {
     /// Print out what the latest system generation number is.
     Latest,
     /// Delete older generations.
-    DeleteOld(DeleteOld),
+    DeleteOld(GenDeleteOld),
+    /// Delete a specific generation.
+    Delete(GenDelete),
     /// Command related to the 'current' generation.
     Current {
         #[command(subcommand)]
@@ -56,7 +58,13 @@ pub enum CurrentCommands {
 }
 
 #[derive(Parser, Debug)]
-pub struct DeleteOld {
+pub struct GenDelete {
+    /// The generation to delete.
+    pub generation: usize,
+}
+
+#[derive(Parser, Debug)]
+pub struct GenDeleteOld {
     /// Starting at the oldest generation, how many should be deleted?
     pub how_many: usize,
 }

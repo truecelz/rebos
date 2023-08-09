@@ -98,12 +98,9 @@ pub fn latest_number() -> Result<usize, io::Error> {
     let mut generation_numbers: Vec<usize> = Vec::new();
 
     for i in gen_list.iter() {
-        generation_numbers.push(match i.0.trim().parse() {
+        generation_numbers.push(match usize_from_gen_name(i.0.as_str()) {
             Ok(o) => o,
-            Err(_e) => {
-                error!("Tried to parse invalid generation name! ({})", i.0.trim());
-                return Err(custom_error("Failed to parse invalid generation name!"));
-            },
+            Err(e) => return Err(e),
         });
     }
 
@@ -474,6 +471,14 @@ pub fn delete(generation: usize) -> Result<(), io::Error> {
         }
     }
 
+    if match exists(generation) {
+        Ok(o) => o,
+        Err(e) => return Err(e),
+    } == false {
+        error!("Generation {} does not exist!", generation);
+        return Err(custom_error("Generation does not exist!"));
+    }
+
     match remove_directory(format!("{}/{}", places::gens(), generation).as_str()) {
         Ok(_o) => info!("Deleted generation: {}", generation),
         Err(e) => {
@@ -483,6 +488,46 @@ pub fn delete(generation: usize) -> Result<(), io::Error> {
     };
 
     return Ok(());
+}
+
+// See if a generation exists.
+pub fn exists(generation: usize) -> Result<bool, io::Error> {
+    let gen_nums = match list_gen_nums() {
+        Ok(o) => o,
+        Err(e) => return Err(e),
+    };
+
+    return Ok(gen_nums.contains(&generation));
+}
+
+// List generation numbers.
+pub fn list_gen_nums() -> Result<Vec<usize>, io::Error> {
+    let gen_list = match list_with_no_calls() {
+        Ok(o) => o,
+        Err(e) => return Err(e),
+    };
+
+    let mut gen_nums: Vec<usize> = Vec::new();
+
+    for i in gen_list.iter() {
+        gen_nums.push(match usize_from_gen_name(i.0.as_str()) {
+            Ok(o) => o,
+            Err(e) => return Err(e),
+        });
+    }
+
+    return Ok(gen_nums);
+}
+
+// Parse generation name to usize.
+pub fn usize_from_gen_name(name: &str) -> Result<usize, io::Error> {
+    return Ok(match name.trim().parse() {
+        Ok(o) => o,
+        Err(_e) => {
+            error!("Failed to parse invalid generation name! ({})", name.trim());
+            return Err(custom_error("Failed to parse invalid generation name!"));
+        },
+    });
 }
 
 // Return true or false based on if the given generation is the 'current' generation.
@@ -656,12 +701,9 @@ fn sort_list_vector(list_vec: &Vec<(String, String, bool, bool)>) -> Result<Vec<
     let mut list_vec_nums: Vec<usize> = Vec::new();
 
     for i in list_vec_names.iter() {
-        list_vec_nums.push(match i.trim().parse() {
+        list_vec_nums.push(match usize_from_gen_name(i) {
             Ok(o) => o,
-            Err(_e) => {
-                error!("Failed to parse invalid generation name! ({})", i.trim());
-                return Err(custom_error("Failed to parse invalid generation name!"));
-            },
+            Err(e) => return Err(e),
         });
     }
 
@@ -671,12 +713,9 @@ fn sort_list_vector(list_vec: &Vec<(String, String, bool, bool)>) -> Result<Vec<
 
     for i in list_vec_nums.iter() {
         for j in list_vec.iter() {
-            let j_num: usize = match j.0.trim().parse() {
+            let j_num: usize = match usize_from_gen_name(j.0.as_str()) {
                 Ok(o) => o,
-                Err(_e) => {
-                    error!("Failed to parse invalid generation name! ({})", j.0.trim());
-                    return Err(custom_error("Failed to parse invalid generation name!"));
-                },
+                Err(e) => return Err(e),
             };
 
             if &j_num == i {
@@ -706,12 +745,9 @@ pub fn get_oldest() -> Result<usize, io::Error> {
 
     let oldest_name = gen_names[0].to_string();
 
-    let oldest_number: usize = match oldest_name.trim().parse() {
+    let oldest_number: usize = match usize_from_gen_name(oldest_name.as_str()) {
         Ok(o) => o,
-        Err(_e) => {
-            error!("Failed to parse invalid generation name! ({})", oldest_name.trim());
-            return Err(custom_error("Failed to parse invalid generation name!"));
-        },
+        Err(e) => return Err(e),
     };
 
     return Ok(oldest_number);

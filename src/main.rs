@@ -105,6 +105,12 @@ fn app() -> ExitCode {
                         Err(_e) => return ExitCode::Fail,
                     };
                 },
+                cli::GenCommands::Delete(g) => {
+                    match generation::delete(g.generation) {
+                        Ok(_o) => {}, // Handled by delete().
+                        Err(_e) => return ExitCode::Fail,
+                    };
+                },
                 cli::GenCommands::Current { command } => {
                     match command {
                         cli::CurrentCommands::Build => {
