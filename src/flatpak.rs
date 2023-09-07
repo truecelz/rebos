@@ -1,10 +1,8 @@
 #![allow(dead_code)]
 
 use std::io;
-use crate::library::*;
 use crate::convert::*;
-use crate::log::*;
-use crate::{info, error};
+use crate::package_management::PackageManager;
 
 enum Flatpak {
     Install(Vec<String>),
@@ -13,26 +11,10 @@ enum Flatpak {
 }
 
 pub fn install(pkgs: &Vec<String>) -> Result<(), io::Error> {
-    if pkgs.len() == 0 {
-        return Ok(());
-    }
-
-    if pkgs[0].trim() == "" {
-        return Ok(());
-    }
-
     return flatpak(Flatpak::Install(pkgs.clone()));
 }
 
 pub fn uninstall(pkgs: &Vec<String>) -> Result<(), io::Error> {
-    if pkgs.len() == 0 {
-        return Ok(());
-    }
-
-    if pkgs[0].trim() == "" {
-        return Ok(());
-    }
-
     return flatpak(Flatpak::Remove(pkgs.clone()));
 }
 
@@ -42,34 +24,61 @@ pub fn upgrade() -> Result<(), io::Error> {
 
 fn flatpak(mode: Flatpak) -> Result<(), io::Error> {
     match mode {
+        Flatpak::Install(ref p) => {
+            if p.len() == 0 {
+                return Ok(());
+            }
+
+            if p[0].trim() == "" {
+                return Ok(());
+            }
+        },
+        Flatpak::Remove(ref p) => {
+            if p.len() == 0 {
+                return Ok(());
+            }
+
+            if p[0].trim() == "" {
+                return Ok(());
+            }
+        },
+        _ => {}, // If the Flatpak mode does not have a package list, don't do the ZERO check.
+    };
+
+    let flatpak_manager: PackageManager = get_flatpak_manager();
+
+    match mode {
         Flatpak::Install(pkgs) => {
-            match run_command(format!("flatpak install {}", string_vec_to_string(&pkgs, " ")).as_str()) {
-                true => info!("Installed Flatpaks successfully!"),
-                false => {
-                    error!("Failed to install Flatpaks!");
-                    return Err(custom_error("Failed to install Flatpaks!"));
-                },
+            let pkgs_string = string_vec_to_string(&pkgs, " ");
+
+            match flatpak_manager.install(pkgs_string.as_str()) {
+                Ok(_o) => {},
+                Err(e) => return Err(e),
             };
         },
         Flatpak::Remove(pkgs) => {
-            match run_command(format!("flatpak uninstall {}", string_vec_to_string(&pkgs, " ")).as_str()) {
-                true => info!("Removed Flatpaks successfully!"),
-                false => {
-                    error!("Failed to remove Flatpaks!");
-                    return Err(custom_error("Failed to remove Flatpaks!"));
-                },
+            let pkgs_string = string_vec_to_string(&pkgs, " ");
+
+            match flatpak_manager.remove(pkgs_string.as_str()) {
+                Ok(_o) => {},
+                Err(e) => return Err(e),
             };
         },
-        Flatpak::Upgrade => {
-            match run_command("flatpak upgrade") {
-                true => info!("Upgraded Flatpaks successfully!"),
-                false => {
-                    error!("Failed to upgrade Flatpaks!");
-                    return Err(custom_error("Failed to upgrade Flatpaks!"));
-                },
-            };
+        Flatpak::Upgrade => match flatpak_manager.upgrade() {
+            Ok(_o) => {},
+            Err(e) => return Err(e),
         },
     };
 
     return Ok(());
+}
+
+fn get_flatpak_manager() -> PackageManager {
+    return PackageManager {
+        install: String::from("flatpak install #:?"),
+        remove: String::from("flatpak uninstall #:?"),
+        upgrade: String::from("flatpak upgrade"),
+        plural_name: String::from("flatpaks"),
+        ..PackageManager::default()
+    };
 }
