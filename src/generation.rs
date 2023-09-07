@@ -8,7 +8,7 @@ use crate::filesystem::*;
 use crate::places;
 use crate::log::*;
 use crate::library::*;
-use crate::package_management::*;
+use crate::pkg_manager::*;
 use crate::{info, warning, error, generic, note};
 use crate::config::{Config, ConfigSide};
 use crate::config::config_for;
