@@ -8,10 +8,10 @@ use crate::filesystem::*;
 use crate::convert::*;
 use crate::log::*;
 use crate::places;
-use crate::{info, error};
+use crate::{info, error, debug};
 
 #[derive(Deserialize, Debug)]
-struct PackageManager {
+pub struct PackageManager {
     install: String,
     remove: String,
     sync: String,
@@ -19,8 +19,8 @@ struct PackageManager {
     config: HashMap<String, bool>,
 }
 
-impl PackageManagerFunctions for PackageManager {
-    fn config_value(&self, key: &str) -> Result<bool, io::Error> {
+impl PackageManager {
+    pub fn config_value(&self, key: &str) -> Result<bool, io::Error> {
         return match self.config.get(key) {
             Some(s) => Ok(*s),
             None => {
@@ -29,10 +29,58 @@ impl PackageManagerFunctions for PackageManager {
             },
         };
     }
-}
 
-trait PackageManagerFunctions {
-    fn config_value(&self, key: &str) -> Result<bool, io::Error>;
+    pub fn install(&self, pkgs: &str) -> Result<(), io::Error> {
+        debug!("Installing packages!");
+
+        debug!("{}", self.install);
+
+        let command = sed(self.install.as_str(), "#:?", pkgs);
+
+        debug!("{}", command);
+        
+        match run_command(command.as_str()) {
+            true => return Ok(()),
+            false => {
+                error!("Failed to install packages!");
+
+                return Err(custom_error("Failed to install packages!"));
+            },
+        };
+    }
+
+    pub fn remove(&self, pkgs: &str) -> Result<(), io::Error> {
+        match run_command(sed(self.remove.as_str(), "#:?", pkgs).as_str()) {
+            true => return Ok(()),
+            false => {
+                error!("Failed to remove packages!");
+
+                return Err(custom_error("Failed to remove packages!"));
+            },
+        };
+    }
+
+    pub fn sync(&self) -> Result<(), io::Error> {
+        match run_command(self.sync.as_str()) {
+            true => return Ok(()),
+            false => {
+                error!("Failed to sync repositories!");
+
+                return Err(custom_error("Failed to sync repositories!"));
+            },
+        };
+    }
+
+    pub fn upgrade(&self) -> Result<(), io::Error> {
+        match run_command(self.upgrade.as_str()) {
+            true => return Ok(()),
+            false => {
+                error!("Failed to upgrade packages!");
+
+                return Err(custom_error("Failed to upgrade packages!"));
+            },
+        };
+    }
 }
 
 enum PackageManagementMode {
@@ -101,17 +149,16 @@ fn package_management(pmm: PackageManagementMode, pkgs: &Vec<String>) -> Result<
     }
 
     for i in pkg_stuff.iter() {
-        match run_command(match pmm {
-            PackageManagementMode::Install => sed(package_manager.install.as_str(), "#:?", i),
-            PackageManagementMode::Remove => sed(package_manager.remove.as_str(), "#:?", i),
-            PackageManagementMode::Sync => package_manager.sync.to_string(),
-            PackageManagementMode::Upgrade => package_manager.upgrade.to_string(),
-        }.as_str()) {
-            true => {},
-            false => {
-                error!("Failed to run command related to package management!");
-                return Err(custom_error("Failed to run command related to package management!"));
-            },
+        let pmm_result = match pmm {
+            PackageManagementMode::Install => package_manager.install(i),
+            PackageManagementMode::Remove => package_manager.remove(i),
+            PackageManagementMode::Sync => package_manager.sync(),
+            PackageManagementMode::Upgrade => package_manager.upgrade(),
+        };
+
+        match pmm_result {
+            Ok(_o) => {},
+            Err(e) => return Err(e),
         };
     }
 
