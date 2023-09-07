@@ -8,12 +8,11 @@ use crate::filesystem::*;
 use crate::places;
 use crate::log::*;
 use crate::library::*;
-use crate::pkg_manager::*;
+use crate::pkg_managers::*;
 use crate::{info, warning, error, generic, note};
 use crate::config::{Config, ConfigSide};
 use crate::config::config_for;
 use crate::system;
-use crate::flatpak;
 
 // The structure for a generation.
 #[derive(PartialEq, Serialize, Deserialize, Debug)]
@@ -209,12 +208,12 @@ pub fn build() -> Result<(), io::Error> {
                 };
             }
 
-            match install(&pkgs_to_install) {
+            match pkg_manager::install(&pkgs_to_install) {
                 Ok(_o) => {},
                 Err(e) => return Err(e),
             };
 
-            match uninstall(&pkgs_to_remove) {
+            match pkg_manager::uninstall(&pkgs_to_remove) {
                 Ok(_o) => {},
                 Err(e) => return Err(e),
             };
@@ -244,7 +243,7 @@ pub fn build() -> Result<(), io::Error> {
             print_history(&flatpaks_diffs);
         },
         Err(_e) => {
-            match install(&curr_gen.pkgs) {
+            match pkg_manager::install(&curr_gen.pkgs) {
                 Ok(_o) => {},
                 Err(e) => return Err(e),
             };
