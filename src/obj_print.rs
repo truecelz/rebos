@@ -14,4 +14,9 @@ pub fn generation(gen: &Generation) {
     for i in gen.flatpaks.iter() {
         generic!("{}", i);
     }
+
+    info!("Crates:");
+    for i in gen.crates.iter() {
+        generic!("{}", i);
+    }
 }

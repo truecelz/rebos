@@ -25,6 +25,11 @@ pkgs = [
 flatpaks = [
     # \"flatseal\",
 ]
+
+# Packages to be installed via Cargo.
+crates = [
+    # \"bacon\",
+]
 ";
 
 const DEFAULT_PACKAGE_MANAGER_CONFIG: &str =

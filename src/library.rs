@@ -106,20 +106,24 @@ pub fn history(str_1: &str, str_2: &str) -> Vec<History> {
     let mut history_vec: Vec<History> = Vec::new();
 
     for i in lines_1.iter() {
-        if lines_2.contains(i) == false {
-            history_vec.push(History {
-                mode: HistoryMode::Remove,
-                line: i.to_string(),
-            });
+        if i.trim() != "" {
+            if lines_2.contains(i) == false {
+                history_vec.push(History {
+                    mode: HistoryMode::Remove,
+                    line: i.to_string(),
+                });
+            }
         }
     }
 
     for i in lines_2.iter() {
-        if lines_1.contains(i) == false {
-            history_vec.push(History {
-                mode: HistoryMode::Add,
-                line: i.to_string(),
-            });
+        if i.trim() != "" {
+            if lines_1.contains(i) == false {
+                history_vec.push(History {
+                    mode: HistoryMode::Add,
+                    line: i.to_string(),
+                });
+            }
         }
     }
 

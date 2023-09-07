@@ -1,0 +1,3 @@
+generation::build()
+obj_print::generation()
+config::DEFAULT_USER_GEN

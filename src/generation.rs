@@ -20,6 +20,7 @@ use crate::system;
 pub struct Generation {
     pub pkgs: Vec<String>,
     pub flatpaks: Vec<String>,
+    pub crates: Vec<String>,
 }
 
 impl Default for Generation {
@@ -27,6 +28,7 @@ impl Default for Generation {
         return Generation {
             pkgs: Vec::new(),
             flatpaks: Vec::new(),
+            crates: Vec::new(),
         };
     }
 }
@@ -185,14 +187,21 @@ pub fn build() -> Result<(), io::Error> {
             let built_flatpaks_string = string_vec_to_string(&built_gen.flatpaks, "\n");
             let curr_flatpaks_string = string_vec_to_string(&curr_gen.flatpaks, "\n");
 
+            let built_crates_string = string_vec_to_string(&built_gen.crates, "\n");
+            let curr_crates_string = string_vec_to_string(&curr_gen.crates, "\n");
+
             let pkgs_diffs = history(&built_pkgs_string, &curr_pkgs_string);
             let flatpaks_diffs = history(&built_flatpaks_string, &curr_flatpaks_string);
+            let crates_diffs = history(&built_crates_string, &curr_crates_string);
 
             let mut pkgs_to_install: Vec<String> = Vec::new();
             let mut pkgs_to_remove: Vec<String> = Vec::new();
 
             let mut flatpaks_to_install: Vec<String> = Vec::new();
             let mut flatpaks_to_remove: Vec<String> = Vec::new();
+
+            let mut crates_to_install: Vec<String> = Vec::new();
+            let mut crates_to_remove: Vec<String> = Vec::new();
 
             for i in pkgs_diffs.iter() {
                 match i.mode {
@@ -208,12 +217,24 @@ pub fn build() -> Result<(), io::Error> {
                 };
             }
 
+            for i in crates_diffs.iter() {
+                match i.mode {
+                    HistoryMode::Add => crates_to_install.push(i.line.to_string()),
+                    HistoryMode::Remove => crates_to_remove.push(i.line.to_string()),
+                };
+            }
+
+            match pkg_manager::uninstall(&pkgs_to_remove) {
+                Ok(_o) => {},
+                Err(e) => return Err(e),
+            };
+
             match pkg_manager::install(&pkgs_to_install) {
                 Ok(_o) => {},
                 Err(e) => return Err(e),
             };
 
-            match pkg_manager::uninstall(&pkgs_to_remove) {
+            match flatpak::uninstall(&flatpaks_to_remove) {
                 Ok(_o) => {},
                 Err(e) => return Err(e),
             };
@@ -223,7 +244,12 @@ pub fn build() -> Result<(), io::Error> {
                 Err(e) => return Err(e),
             };
 
-            match flatpak::uninstall(&flatpaks_to_remove) {
+            match cargo::uninstall(&crates_to_remove) {
+                Ok(_o) => {},
+                Err(e) => return Err(e),
+            };
+
+            match cargo::install(&crates_to_install) {
                 Ok(_o) => {},
                 Err(e) => return Err(e),
             };
@@ -241,6 +267,9 @@ pub fn build() -> Result<(), io::Error> {
 
             info!("Flatpaks:");
             print_history(&flatpaks_diffs);
+
+            info!("Crates:");
+            print_history(&crates_diffs);
         },
         Err(_e) => {
             match pkg_manager::install(&curr_gen.pkgs) {
@@ -249,6 +278,11 @@ pub fn build() -> Result<(), io::Error> {
             };
 
             match flatpak::install(&curr_gen.flatpaks) {
+                Ok(_o) => {},
+                Err(e) => return Err(e),
+            };
+
+            match cargo::install(&curr_gen.crates) {
                 Ok(_o) => {},
                 Err(e) => return Err(e),
             };

@@ -4,28 +4,23 @@ use std::io;
 use crate::convert::*;
 use crate::package_management::PackageManager;
 
-enum Flatpak {
+enum Cargo {
     Install(Vec<String>),
     Remove(Vec<String>),
-    Upgrade,
 }
 
 pub fn install(pkgs: &Vec<String>) -> Result<(), io::Error> {
-    return flatpak(Flatpak::Install(pkgs.clone()));
+    return cargo(Cargo::Install(pkgs.clone()));
 }
 
 pub fn uninstall(pkgs: &Vec<String>) -> Result<(), io::Error> {
-    return flatpak(Flatpak::Remove(pkgs.clone()));
+    return cargo(Cargo::Remove(pkgs.clone()));
 }
 
-pub fn upgrade() -> Result<(), io::Error> {
-    return flatpak(Flatpak::Upgrade);
-}
-
-fn flatpak(mode: Flatpak) -> Result<(), io::Error> {
+fn cargo(mode: Cargo) -> Result<(), io::Error> {
     #[allow(unreachable_patterns)]
     match mode {
-        Flatpak::Install(ref p) => {
+        Cargo::Install(ref p) => {
             if p.len() == 0 {
                 return Ok(());
             }
@@ -34,7 +29,7 @@ fn flatpak(mode: Flatpak) -> Result<(), io::Error> {
                 return Ok(());
             }
         },
-        Flatpak::Remove(ref p) => {
+        Cargo::Remove(ref p) => {
             if p.len() == 0 {
                 return Ok(());
             }
@@ -43,43 +38,38 @@ fn flatpak(mode: Flatpak) -> Result<(), io::Error> {
                 return Ok(());
             }
         },
-        _ => {}, // If the Flatpak mode does not have a package list, don't do the ZERO check.
+        _ => {}, // If the Cargo mode does not have a package list, don't do the ZERO check.
     };
 
-    let flatpak_manager: PackageManager = get_flatpak_manager();
+    let cargo_manager: PackageManager = get_cargo_manager();
 
     match mode {
-        Flatpak::Install(pkgs) => {
+        Cargo::Install(pkgs) => {
             let pkgs_string = string_vec_to_string(&pkgs, " ");
 
-            match flatpak_manager.install(pkgs_string.as_str()) {
+            match cargo_manager.install(pkgs_string.as_str()) {
                 Ok(_o) => {},
                 Err(e) => return Err(e),
             };
         },
-        Flatpak::Remove(pkgs) => {
+        Cargo::Remove(pkgs) => {
             let pkgs_string = string_vec_to_string(&pkgs, " ");
 
-            match flatpak_manager.remove(pkgs_string.as_str()) {
+            match cargo_manager.remove(pkgs_string.as_str()) {
                 Ok(_o) => {},
                 Err(e) => return Err(e),
             };
-        },
-        Flatpak::Upgrade => match flatpak_manager.upgrade() {
-            Ok(_o) => {},
-            Err(e) => return Err(e),
         },
     };
 
     return Ok(());
 }
 
-fn get_flatpak_manager() -> PackageManager {
+fn get_cargo_manager() -> PackageManager {
     return PackageManager {
-        install: String::from("flatpak install #:?"),
-        remove: String::from("flatpak uninstall #:?"),
-        upgrade: String::from("flatpak upgrade"),
-        plural_name: String::from("flatpaks"),
+        install: String::from("cargo install #:?"),
+        remove: String::from("cargo uninstall #:?"),
+        plural_name: String::from("crates"),
         ..PackageManager::default()
     };
 }
