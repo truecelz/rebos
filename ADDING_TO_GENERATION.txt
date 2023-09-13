@@ -1,3 +1,4 @@
 generation::build()
+generation::Generation::extend()
 obj_print::generation()
 config::DEFAULT_USER_GEN

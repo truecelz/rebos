@@ -37,6 +37,7 @@ impl GenerationUtils for Generation {
     fn extend(&mut self, other_gen: Generation) {
         self.pkgs.extend(other_gen.pkgs);
         self.flatpaks.extend(other_gen.flatpaks);
+        self.crates.extend(other_gen.crates);
     }
 }
 
