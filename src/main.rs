@@ -13,6 +13,7 @@ mod obj_print; // Print objects.
 mod package_management; // Stuff related to package management.
 mod system; // Used for getting system information.
 mod pkg_managers; // Package managers.
+mod pkg_managers_boilerplate; // Boilerplate code for package managers.
 
 // Import stuff from source files and crates.
 use clap::Parser;
