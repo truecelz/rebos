@@ -69,15 +69,27 @@ pub fn gen(side: ConfigSide) -> Result<Generation, io::Error> {
         });
     }
 
-    let gen_imports = generation.imports.clone();
+    while generation.imports.len() > 0 {
+        let gen_imports = generation.imports.clone();
 
-    for i in gen_imports.iter() {
-        let i_gen = match read_to_gen(format!("{}/imports/{}.toml", places::base_user(), i).as_str()) {
-            Ok(o) => o,
-            Err(e) => return Err(e),
-        };
+        for i in gen_imports.iter() {
+            let i_gen = match read_to_gen(format!("{}/imports/{}.toml", places::base_user(), i).as_str()) {
+                Ok(o) => o,
+                Err(e) => return Err(e),
+            };
 
-        generation.extend(i_gen);
+            generation.extend(i_gen);
+        }
+
+        let after_gen_imports = generation.imports.clone();
+
+        for i in 0..after_gen_imports.len() {
+            if gen_imports.contains(&after_gen_imports[i]) {
+                generation.imports[i] = String::new();
+            }
+        }
+
+        generation.imports = generation.imports.into_iter().filter(|x| *x != String::new()).collect();
     }
 
     return Ok(generation);
