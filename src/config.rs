@@ -16,6 +16,11 @@ const DEFAULT_USER_GEN: &str =
 #    Generation File    #
 # --------------------- #
 
+# Other generation files to import. (Example: intensive_apps -> ~/.config/dister/imports/intensive_apps.toml)
+imports = [
+    # \"intensive_apps\",
+]
+
 # Packages to be installed via the native package manager.
 pkgs = [
     # \"git\",

@@ -19,6 +19,7 @@ use crate::generation_boilerplate::macros::*;
 #[derive(PartialEq, Serialize, Deserialize, Debug)]
 #[serde(deny_unknown_fields, default)]
 pub struct Generation {
+    pub imports: Vec<String>,
     pub pkgs: Vec<String>,
     pub flatpaks: Vec<String>,
     pub crates: Vec<String>,
@@ -27,6 +28,7 @@ pub struct Generation {
 impl Default for Generation {
     fn default() -> Generation {
         return Generation {
+            imports: Vec::new(),
             pkgs: Vec::new(),
             flatpaks: Vec::new(),
             crates: Vec::new(),
@@ -36,6 +38,7 @@ impl Default for Generation {
 
 impl GenerationUtils for Generation {
     fn extend(&mut self, other_gen: Generation) {
+        self.imports.extend(other_gen.imports);
         self.pkgs.extend(other_gen.pkgs);
         self.flatpaks.extend(other_gen.flatpaks);
         self.crates.extend(other_gen.crates);
@@ -64,6 +67,17 @@ pub fn gen(side: ConfigSide) -> Result<Generation, io::Error> {
             Ok(o) => o,
             Err(e) => return Err(e),
         });
+    }
+
+    let gen_imports = generation.imports.clone();
+
+    for i in gen_imports.iter() {
+        let i_gen = match read_to_gen(format!("{}/imports/{}.toml", places::base_user(), i).as_str()) {
+            Ok(o) => o,
+            Err(e) => return Err(e),
+        };
+
+        generation.extend(i_gen);
     }
 
     return Ok(generation);
