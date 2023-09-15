@@ -3,20 +3,12 @@
 use crate::generation::Generation;
 use crate::log::*;
 use crate::{generic, info};
+use crate::obj_print_boilerplate::macros::*;
 
 pub fn generation(gen: &Generation) {
-    info!("Packages:");
-    for i in gen.pkgs.iter() {
-        generic!("{}", i);
-    }
+    println!("");
 
-    info!("Flatpaks:");
-    for i in gen.flatpaks.iter() {
-        generic!("{}", i);
-    }
-
-    info!("Crates:");
-    for i in gen.crates.iter() {
-        generic!("{}", i);
-    }
+    print_entry!("Packages", gen.pkgs);
+    print_entry!("Flatpaks", gen.flatpaks);
+    print_entry!("Crates", gen.crates);
 }

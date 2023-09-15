@@ -23,7 +23,7 @@ pkgs = [
 
 # Packages to be installed via Flatpak.
 flatpaks = [
-    # \"flatseal\",
+    # \"com.github.tchx84.Flatseal\",
 ]
 
 # Packages to be installed via Cargo.

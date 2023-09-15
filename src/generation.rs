@@ -13,6 +13,7 @@ use crate::{info, warning, error, generic, note};
 use crate::config::{Config, ConfigSide};
 use crate::config::config_for;
 use crate::system;
+use crate::generation_boilerplate::macros::*;
 
 // The structure for a generation.
 #[derive(PartialEq, Serialize, Deserialize, Debug)]
@@ -164,7 +165,6 @@ pub fn commit(msg: &str) -> Result<(), io::Error> {
 
 // Build the 'current' system generation.
 pub fn build() -> Result<(), io::Error> {
-
     let current_num = match get_current() {
         Ok(o) => o,
         Err(e) => return Err(e),
@@ -182,79 +182,14 @@ pub fn build() -> Result<(), io::Error> {
                 Err(e) => return Err(e),
             };
 
-            let built_pkgs_string = string_vec_to_string(&built_gen.pkgs, "\n");
-            let curr_pkgs_string = string_vec_to_string(&curr_gen.pkgs, "\n");
+            let mut summary_entries: Vec<(String, Vec<History>)> = Vec::new();
 
-            let built_flatpaks_string = string_vec_to_string(&built_gen.flatpaks, "\n");
-            let curr_flatpaks_string = string_vec_to_string(&curr_gen.flatpaks, "\n");
+            build_package_manager!(built_gen.pkgs, curr_gen.pkgs, pkg_manager, "Packages".to_string(), summary_entries);
+            build_package_manager!(built_gen.flatpaks, curr_gen.flatpaks, flatpak, "Flatpaks".to_string(), summary_entries);
+            build_package_manager!(built_gen.crates, curr_gen.crates, cargo, "Crates".to_string(), summary_entries);
 
-            let built_crates_string = string_vec_to_string(&built_gen.crates, "\n");
-            let curr_crates_string = string_vec_to_string(&curr_gen.crates, "\n");
-
-            let pkgs_diffs = history(&built_pkgs_string, &curr_pkgs_string);
-            let flatpaks_diffs = history(&built_flatpaks_string, &curr_flatpaks_string);
-            let crates_diffs = history(&built_crates_string, &curr_crates_string);
-
-            let mut pkgs_to_install: Vec<String> = Vec::new();
-            let mut pkgs_to_remove: Vec<String> = Vec::new();
-
-            let mut flatpaks_to_install: Vec<String> = Vec::new();
-            let mut flatpaks_to_remove: Vec<String> = Vec::new();
-
-            let mut crates_to_install: Vec<String> = Vec::new();
-            let mut crates_to_remove: Vec<String> = Vec::new();
-
-            for i in pkgs_diffs.iter() {
-                match i.mode {
-                    HistoryMode::Add => pkgs_to_install.push(i.line.to_string()),
-                    HistoryMode::Remove => pkgs_to_remove.push(i.line.to_string()),
-                };
-            }
-
-            for i in flatpaks_diffs.iter() {
-                match i.mode {
-                    HistoryMode::Add => flatpaks_to_install.push(i.line.to_string()),
-                    HistoryMode::Remove => flatpaks_to_remove.push(i.line.to_string()),
-                };
-            }
-
-            for i in crates_diffs.iter() {
-                match i.mode {
-                    HistoryMode::Add => crates_to_install.push(i.line.to_string()),
-                    HistoryMode::Remove => crates_to_remove.push(i.line.to_string()),
-                };
-            }
-
-            match pkg_manager::uninstall(&pkgs_to_remove) {
-                Ok(_o) => {},
-                Err(e) => return Err(e),
-            };
-
-            match pkg_manager::install(&pkgs_to_install) {
-                Ok(_o) => {},
-                Err(e) => return Err(e),
-            };
-
-            match flatpak::uninstall(&flatpaks_to_remove) {
-                Ok(_o) => {},
-                Err(e) => return Err(e),
-            };
-
-            match flatpak::install(&flatpaks_to_install) {
-                Ok(_o) => {},
-                Err(e) => return Err(e),
-            };
-
-            match cargo::uninstall(&crates_to_remove) {
-                Ok(_o) => {},
-                Err(e) => return Err(e),
-            };
-
-            match cargo::install(&crates_to_install) {
-                Ok(_o) => {},
-                Err(e) => return Err(e),
-            };
-
+            println!("");
+            println!("");
             println!("");
 
             info!("#################");
@@ -263,30 +198,20 @@ pub fn build() -> Result<(), io::Error> {
 
             println!("");
 
-            info!("Packages:");
-            print_history(&pkgs_diffs);
+            for se in summary_entries.iter() {
+                info!("{}:", se.0);
+                print_history(&se.1);
 
-            info!("Flatpaks:");
-            print_history(&flatpaks_diffs);
+                println!("");
+            }
 
-            info!("Crates:");
-            print_history(&crates_diffs);
+            println!("");
+            println!("");
         },
         Err(_e) => {
-            match pkg_manager::install(&curr_gen.pkgs) {
-                Ok(_o) => {},
-                Err(e) => return Err(e),
-            };
-
-            match flatpak::install(&curr_gen.flatpaks) {
-                Ok(_o) => {},
-                Err(e) => return Err(e),
-            };
-
-            match cargo::install(&curr_gen.crates) {
-                Ok(_o) => {},
-                Err(e) => return Err(e),
-            };
+            build_package_manager_first_time!(pkg_manager, curr_gen.pkgs);
+            build_package_manager_first_time!(flatpak, curr_gen.flatpaks);
+            build_package_manager_first_time!(cargo, curr_gen.crates);
 
             note!("This output will look slightly different than when you run this command again, because this is your first time building a generation on this system.");
         },

@@ -6,10 +6,12 @@ mod places; // Where is stuff stored?
 mod cli; // For argument parsing and command structuring.
 mod log; // Contains macros and stuff for pretty output messages in the terminal!
 mod generation; // The generations system.
+mod generation_boilerplate; // Boilerplate code for generations system.
 mod repeated; // Used for repeated code.
 mod config; // Configuration stuff.
 mod dir; // Interfacing with the dirs crate.
 mod obj_print; // Print objects.
+mod obj_print_boilerplate; // Boilerplate code for obj print.
 mod package_management; // Stuff related to package management.
 mod system; // Used for getting system information.
 mod pkg_managers; // Package managers.
