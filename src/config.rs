@@ -86,6 +86,7 @@ pub fn init_user_config() -> Result<(), io::Error> {
     let directories = vec![
         places::base_user(),
         format!("{}/machines/{}", places::base_user(), system_hostname),
+        format!("{}/imports", places::base_user()),
     ];
 
     for i in directories.iter() {
