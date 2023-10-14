@@ -5,8 +5,10 @@ use colored::Colorize;
 use serde::{Serialize, Deserialize};
 use crate::convert::*;
 use crate::filesystem::*;
+use crate::hook::run_hook_and_return_if_err;
 use crate::places;
 use crate::log::*;
+use crate::library;
 use crate::library::*;
 use crate::pkg_managers::*;
 use crate::{info, warning, error, generic, note};
@@ -191,6 +193,8 @@ pub fn commit(msg: &str) -> Result<(), io::Error> {
 
 // Build the 'current' system generation.
 pub fn build() -> Result<(), io::Error> {
+    run_hook_and_return_if_err!("pre_build");
+
     let current_num = match get_current() {
         Ok(o) => o,
         Err(e) => return Err(e),
@@ -247,6 +251,8 @@ pub fn build() -> Result<(), io::Error> {
         Ok(_o) => {},
         Err(e) => return Err(e),
     };
+
+    run_hook_and_return_if_err!("post_build");
 
     return Ok(());
 }

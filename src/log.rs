@@ -1,7 +1,9 @@
 #![allow(dead_code)]
 
+use clap::*;
 use colored::{Colorize, ColoredString};
 
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Subcommand, ValueEnum)]
 pub enum LogMode {
     Info,
     Error,

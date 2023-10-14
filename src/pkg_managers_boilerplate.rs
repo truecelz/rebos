@@ -6,6 +6,10 @@ pub mod macros {
             use std::io;
             use crate::convert::*;
             use crate::package_management::PackageManager;
+            use crate::hook::*;
+            use crate::library;
+            use crate::LogMode;
+            use crate::log_core_print;
     
             enum ManageMode {
                 Install(Vec<String>),
@@ -45,28 +49,48 @@ pub mod macros {
             
                 match mode {
                     ManageMode::Install(pkgs) => {
+                        run_hook_and_return_if_err!(format!("pre_{}_install", manager.plural_name));
+
                         let pkgs_string = string_vec_to_string(&pkgs, " ");
             
                         match manager.install(pkgs_string.as_str()) {
                             Ok(_o) => {},
                             Err(e) => return Err(e),
                         };
+
+                        run_hook_and_return_if_err!(format!("post_{}_install", manager.plural_name));
                     },
                     ManageMode::Remove(pkgs) => {
+                        run_hook_and_return_if_err!(format!("pre_{}_remove", manager.plural_name));
+
                         let pkgs_string = string_vec_to_string(&pkgs, " ");
             
                         match manager.remove(pkgs_string.as_str()) {
                             Ok(_o) => {},
                             Err(e) => return Err(e),
                         };
+
+                        run_hook_and_return_if_err!(format!("post_{}_remove", manager.plural_name));
                     },
-                    ManageMode::Upgrade => match manager.upgrade() {
-                        Ok(_o) => {},
-                        Err(e) => return Err(e),
+                    ManageMode::Upgrade => {
+                        run_hook_and_return_if_err!(format!("pre_{}_upgrade", manager.plural_name));
+
+                        match manager.upgrade() {
+                            Ok(_o) => {},
+                            Err(e) => return Err(e),
+                        }
+
+                        run_hook_and_return_if_err!(format!("post_{}_upgrade", manager.plural_name));
                     },
-                    ManageMode::Sync => match manager.sync() {
-                        Ok(_o) => {},
-                        Err(e) => return Err(e),
+                    ManageMode::Sync => {
+                        run_hook_and_return_if_err!(format!("pre_{}_sync", manager.plural_name));
+
+                        match manager.sync() {
+                            Ok(_o) => {},
+                            Err(e) => return Err(e),
+                        }
+
+                        run_hook_and_return_if_err!(format!("post_{}_sync", manager.plural_name));
                     },
                 };
             

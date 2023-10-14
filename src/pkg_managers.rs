@@ -40,7 +40,6 @@ pub mod cargo {
 
 pub mod pkg_manager {
     use crate::pkg_managers_boilerplate::macros::*;
-    use crate::log::*;
     use crate::error;
     use crate::filesystem::*;
     use crate::library::*;

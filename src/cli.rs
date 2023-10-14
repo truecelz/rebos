@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 use clap::{Parser, Subcommand};
+use crate::log::LogMode;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -13,32 +14,50 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
-    /// Run a generation system command.
+    /// Run a generation system command
     Gen {
         #[command(subcommand)]
         command: GenCommands,
     },
-    /// Run the program setup.
+    /// Run the program setup
     Setup,
-    /// Create a default Dister configuration.
+    /// Create a default Dister configuration
     InitConfig,
+    /// API for things like scripting
+    API {
+        #[command(subcommand)]
+        command: APICommands,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum APICommands {
+    /// Use the Dister log message system
+    Echo {
+        log_mode: LogMode,
+        message: String,
+    },
+    /// Use the Dister log message system (Generic)
+    EchoGeneric {
+        message: String,
+    },
 }
 
 #[derive(Subcommand, Debug)]
 pub enum GenCommands {
-    /// Confirm your custom generation, and make it the 'current' generation.
+    /// Confirm your custom generation, and make it the 'current' generation
     Commit(Commit),
-    /// List all system generations.
+    /// List all system generations
     List,
-    /// Get information on the generation in the user's config.
+    /// Get information on the generation in the user's config
     Info,
-    /// Print out what the latest system generation number is.
+    /// Print out what the latest system generation number is
     Latest,
-    /// Delete older generations.
+    /// Delete older generations
     DeleteOld(GenDeleteOld),
-    /// Delete a specific generation.
+    /// Delete a specific generation
     Delete(GenDelete),
-    /// Command related to the 'current' generation.
+    /// Command related to the 'current' generation
     Current {
         #[command(subcommand)]
         command: CurrentCommands,
@@ -47,19 +66,19 @@ pub enum GenCommands {
 
 #[derive(Subcommand, Debug)]
 pub enum CurrentCommands {
-    /// Build the 'current' generation. (You can always roll back later.)
+    /// Build the 'current' generation (You can always roll back later)
     Build,
-    /// Rollback to a previous generation. (You still need to build after rolling back.)
+    /// Rollback to a previous generation (You still need to build after rolling back)
     Rollback(Rollback),
-    /// Set the 'current' generation to the latest generation.
+    /// Set the 'current' generation to the latest generation
     ToLatest,
-    /// Set the 'current' generation to a specific generation.
+    /// Set the 'current' generation to a specific generation
     Set(SetCurrent),
 }
 
 #[derive(Parser, Debug)]
 pub struct GenDelete {
-    /// The generation to delete.
+    /// The generation to delete
     pub generation: usize,
 }
 
@@ -71,18 +90,18 @@ pub struct GenDeleteOld {
 
 #[derive(Parser, Debug)]
 pub struct Commit {
-    /// The commit message shows up in the list command.
+    /// The commit message shows up in the list command
     pub msg: String,
 }
 
 #[derive(Parser, Debug)]
 pub struct SetCurrent {
-    /// Generation to jump to.
+    /// Generation to jump to
     pub to: usize,
 }
 
 #[derive(Parser, Debug)]
 pub struct Rollback {
-    /// How many generations to rollback by.
+    /// How many generations to rollback by
     pub by: isize,
 }

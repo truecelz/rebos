@@ -16,6 +16,7 @@ mod package_management; // Stuff related to package management.
 mod system; // Used for getting system information.
 mod pkg_managers; // Package managers.
 mod pkg_managers_boilerplate; // Boilerplate code for package managers.
+mod hook;
 
 // Import stuff from source files and crates.
 use clap::Parser;
@@ -174,6 +175,16 @@ fn app() -> ExitCode {
             match config::init_user_config() {
                 Ok(_o) => info!("Created user configuration successfully!"),
                 Err(_e) => return ExitCode::Fail,
+            };
+        },
+        cli::Commands::API { command } => {
+            match command {
+                cli::APICommands::Echo { log_mode, message } => {
+                    log::log_core_print(message.to_string(), *log_mode);
+                },
+                cli::APICommands::EchoGeneric { message } => {
+                    log::log_generic_print(message.to_string());
+                },
             };
         },
         _ => {
