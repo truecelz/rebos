@@ -6,10 +6,10 @@ pub mod macros {
             $entry_name: expr,
             $gen_field_name: expr
         ) => {
-            info!("{}:", $entry_name);
+            piglog::info!("{}:", $entry_name);
 
             for i in $gen_field_name.iter() {
-                generic!("{}", i);
+                piglog::generic!("{}", i);
             }
 
             println!("");

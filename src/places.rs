@@ -1,10 +1,11 @@
 #![allow(dead_code)]
 
-use crate::filesystem::*;
-use crate::log::*;
-use crate::{info, error};
-use crate::dir;
 use std::io;
+use piglog::prelude::*;
+use piglog::*;
+use fspp::*;
+
+use crate::dir;
 
 // The setup function for the directories.
 pub fn setup() -> Result<(), io::Error> {
@@ -14,10 +15,10 @@ pub fn setup() -> Result<(), io::Error> {
     ];
 
     for i in directories.iter() {
-        match create_directory(i) {
-            Ok(_o) => info!("Created directory: {}", i),
+        match directory::create(i) {
+            Ok(_o) => info!("Created directory: {}", i.to_string()),
             Err(e) => {
-                error!("Failed to create directory: {}", i);
+                error!("Failed to create directory: {}", i.to_string());
                 return Err(e);
             },
         };
@@ -28,17 +29,17 @@ pub fn setup() -> Result<(), io::Error> {
 
 
 
-// The base directory of operations for Dister.
-pub fn base() -> String {
-    return format!("{}/.dister-base", dir::home());
+/// The base directory of operations for Dister.
+pub fn base() -> Path {
+    return dir::home().add_str(".dister-base");
 }
 
-// The directory of generations.
-pub fn gens() -> String {
-    return format!("{}/generations", base());
+/// The directory of generations.
+pub fn gens() -> Path {
+    return base().add_str("generations");
 }
 
-// User's Dister config directory.
-pub fn base_user() -> String {
-    return format!("{}/dister", dir::config());
+/// User's Dister config directory.
+pub fn base_user() -> Path {
+    return dir::config().add_str("dister");
 }

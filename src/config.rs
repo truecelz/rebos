@@ -1,11 +1,12 @@
 #![allow(dead_code)]
 
 use std::io;
+use piglog::prelude::*;
+use piglog::*;
+use fspp::*;
+
 use crate::places;
 use crate::generation;
-use crate::log::*;
-use crate::{info, error};
-use crate::filesystem::*;
 use crate::library::*;
 use crate::config;
 use crate::system;
@@ -85,17 +86,17 @@ pub fn init_user_config() -> Result<(), io::Error> {
 
     let directories = vec![
         places::base_user(),
-        format!("{}/machines/{}", places::base_user(), system_hostname),
-        format!("{}/imports", places::base_user()),
-        format!("{}/hooks", places::base_user()),
+        places::base_user().add_str("machines").add_str(&system_hostname),
+        places::base_user().add_str("imports"),
+        places::base_user().add_str("hooks"),
     ];
 
     for i in directories.iter() {
-        if path_exists(i) == false {
-            match create_directory(i) {
-                Ok(_o) => info!("Created directory: {}", i),
+        if i.exists() == false {
+            match directory::create(i) {
+                Ok(_o) => info!("Created directory: {}", i.to_string()),
                 Err(e) => {
-                    error!("Failed to create directory: {}", i);
+                    error!("Failed to create directory: {}", i.to_string());
                     return Err(e);
                 },
             };
@@ -104,16 +105,16 @@ pub fn init_user_config() -> Result<(), io::Error> {
 
     let files = vec![
         (DEFAULT_USER_GEN, config::config_for(Config::Generation, ConfigSide::User)),
-        (DEFAULT_USER_GEN, format!("{}/machines/{}/gen.toml", places::base_user(), system_hostname)),
-        (DEFAULT_PACKAGE_MANAGER_CONFIG, format!("{}/pkg_manager.toml", places::base_user())),
+        (DEFAULT_USER_GEN, places::base_user().add_str("machines").add_str(&system_hostname).add_str("gen.toml")),
+        (DEFAULT_PACKAGE_MANAGER_CONFIG, places::base_user().add_str("pkg_manager.toml")),
     ];
 
     for i in files.iter() {
-        if path_exists(i.1.as_str()) == false {
-            match write_file(i.0, i.1.as_str()) {
-                Ok(_o) => info!("Created file: {}", i.1),
+        if i.1.exists() == false {
+            match file::write(i.0, &i.1) {
+                Ok(_o) => info!("Created file: {}", i.1.to_string()),
                 Err(e) => {
-                    error!("Failed to create file: {}", i.1);
+                    error!("Failed to create file: {}", i.1.to_string());
                     return Err(e);
                 },
             };
@@ -124,16 +125,16 @@ pub fn init_user_config() -> Result<(), io::Error> {
 }
 
 // Return path for a config file.
-pub fn config_for(config: Config, side: ConfigSide) -> String {
+pub fn config_for(config: Config, side: ConfigSide) -> Path {
     return match config {
         Config::Generation => match side {
-            ConfigSide::User => format!("{}/gen.toml", places::base_user()),
+            ConfigSide::User => places::base_user().add_str("gen.toml"),
             ConfigSide::System => match generation::current_gen() {
                 Ok(o) => o,
                 Err(_e) => {
                     error!("Failed to get config path for system generation!");
                     abort();
-                    return String::from("Hidden string. UwU");
+                    return Path::new("This should never get returned.");
                 },
             },
         },

@@ -6,13 +6,9 @@ pub mod macros {
             $built_field_name: expr,
             $curr_field_name: expr,
             $package_manager: ident,
-            $summary_name: expr,
             $summary_entries: ident
         ) => {
-            let built_string = string_vec_to_string(&$built_field_name, "\n");
-            let curr_string = string_vec_to_string(&$curr_field_name, "\n");
-
-            let diffs = history(&built_string, &curr_string);
+            let diffs = history(&$built_field_name, &$curr_field_name);
 
             let mut to_install: Vec<String> = Vec::new();
             let mut to_remove: Vec<String> = Vec::new();
@@ -34,7 +30,7 @@ pub mod macros {
                 Err(e) => return Err(e),
             };
 
-            $summary_entries.push(($summary_name, diffs));
+            $summary_entries.push(&diffs);
         };
     }
 

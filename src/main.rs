@@ -1,13 +1,10 @@
 // Source files to include.
 mod library; // Full of functions.
 mod convert; // Convert one type to another type.
-mod filesystem; // Functions for interacting with the filesystem.
 mod places; // Where is stuff stored?
 mod cli; // For argument parsing and command structuring.
-mod log; // Contains macros and stuff for pretty output messages in the terminal!
 mod generation; // The generations system.
 mod generation_boilerplate; // Boilerplate code for generations system.
-mod repeated; // Used for repeated code.
 mod config; // Configuration stuff.
 mod dir; // Interfacing with the dirs crate.
 mod obj_print; // Print objects.
@@ -16,15 +13,16 @@ mod package_management; // Stuff related to package management.
 mod system; // Used for getting system information.
 mod pkg_managers; // Package managers.
 mod pkg_managers_boilerplate; // Boilerplate code for package managers.
-mod hook;
+mod hook; // Hook stuff.
 
 // Import stuff from source files and crates.
 use clap::Parser;
-use log::*;
 use std::io;
-use filesystem::*;
 use library::*;
 use config::ConfigSide;
+use colored::Colorize;
+use piglog::prelude::*;
+use piglog::*;
 
 // The exit code for the program.
 #[derive(PartialEq)]
@@ -62,7 +60,7 @@ fn app() -> ExitCode {
     match &args.command {
         cli::Commands::Setup => {},
         _ => {
-            if path_exists(places::base().as_str()) == false {
+            if places::base().exists() == false {
                 error!("It seems that the program is not set up!");
                 return ExitCode::Fail;
             }
@@ -114,6 +112,34 @@ fn app() -> ExitCode {
                         Ok(_o) => {}, // Handled by delete().
                         Err(_e) => return ExitCode::Fail,
                     };
+                },
+                cli::GenCommands::Diff { old, new } => {
+                    if generation::gen_exists(*old) == false || generation::gen_exists(*new) == false {
+                        fatal!("Generation not found!");
+
+                        return ExitCode::Fail;
+                    }
+
+                    let gen_1 = generation::get_gen_from_usize(*old).unwrap();
+                    let gen_2 = generation::get_gen_from_usize(*new).unwrap();
+
+                    let commit_1 = generation::get_gen_commit_from_usize(*old).unwrap();
+                    let commit_2 = generation::get_gen_commit_from_usize(*new).unwrap();
+
+                    let history = library::history_gen(&gen_1, &gen_2);
+
+                    let history: Vec<&Vec<History>> = history.iter().collect();
+
+                    println!(
+                        "{} {} {}",
+                        commit_1.bright_cyan().bold(),
+                        "->".bright_black().bold(),
+                        commit_2.bright_cyan().bold()
+                    );
+
+                    println!("");
+
+                    library::print_history_gen(&history);
                 },
                 cli::GenCommands::Current { command } => {
                     match command {
@@ -180,10 +206,10 @@ fn app() -> ExitCode {
         cli::Commands::API { command } => {
             match command {
                 cli::APICommands::Echo { log_mode, message } => {
-                    log::log_core_print(message.to_string(), *log_mode);
+                    piglog::log_core_print(message.to_string(), *log_mode);
                 },
                 cli::APICommands::EchoGeneric { message } => {
-                    log::log_generic_print(message.to_string());
+                    piglog::log_generic_print(message.to_string());
                 },
             };
         },

@@ -1,9 +1,10 @@
 #![allow(dead_code)]
 
 use std::io;
+use piglog::prelude::*;
+use piglog::error;
+
 use crate::library::custom_error;
-use crate::log::*;
-use crate::error;
 
 pub fn hostname() -> Result<String, io::Error> {
     return Ok(match hostname::get() {

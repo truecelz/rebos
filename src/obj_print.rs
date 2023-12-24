@@ -1,8 +1,8 @@
 #![allow(dead_code)]
 
+use piglog::prelude::*;
+
 use crate::generation::Generation;
-use crate::log::*;
-use crate::{generic, info};
 use crate::obj_print_boilerplate::macros::*;
 
 pub fn generation(gen: &Generation) {

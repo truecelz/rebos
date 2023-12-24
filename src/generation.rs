@@ -3,15 +3,15 @@
 use std::io;
 use colored::Colorize;
 use serde::{Serialize, Deserialize};
-use crate::convert::*;
-use crate::filesystem::*;
+use piglog::prelude::*;
+use piglog::*;
+use fspp::*;
+
 use crate::hook::run_hook_and_return_if_err;
 use crate::places;
-use crate::log::*;
 use crate::library;
 use crate::library::*;
 use crate::pkg_managers::*;
-use crate::{info, warning, error, generic, note};
 use crate::config::{Config, ConfigSide};
 use crate::config::config_for;
 use crate::system;
@@ -54,7 +54,7 @@ pub trait GenerationUtils {
 
 // Return generation structure for...
 pub fn gen(side: ConfigSide) -> Result<Generation, io::Error> {
-    let mut generation = match read_to_gen(config_for(Config::Generation, side).as_str()) {
+    let mut generation = match read_to_gen(&config_for(Config::Generation, side)) {
         Ok(o) => o,
         Err(e) => return Err(e),
     };
@@ -65,20 +65,14 @@ pub fn gen(side: ConfigSide) -> Result<Generation, io::Error> {
     };
 
     if side == ConfigSide::User {
-        generation.extend(match read_to_gen(format!("{}/machines/{}/gen.toml", places::base_user(), system_hostname).as_str()) {
-            Ok(o) => o,
-            Err(e) => return Err(e),
-        });
+        generation.extend(read_to_gen(&places::base_user().add_str("machines").add_str(&system_hostname).add_str("gen.toml"))?);
     }
 
     while generation.imports.len() > 0 {
         let gen_imports = generation.imports.clone();
 
         for i in gen_imports.iter() {
-            let i_gen = match read_to_gen(format!("{}/imports/{}.toml", places::base_user(), i).as_str()) {
-                Ok(o) => o,
-                Err(e) => return Err(e),
-            };
+            let i_gen = read_to_gen(&places::base_user().add_str("imports").add_str(&format!("{i}.toml")))?;
 
             generation.extend(i_gen);
         }
@@ -98,8 +92,8 @@ pub fn gen(side: ConfigSide) -> Result<Generation, io::Error> {
 }
 
 // Read a file and return a Generation object.
-fn read_to_gen(path: &str) -> Result<Generation, io::Error> {
-    return Ok(match toml::from_str(match read_file(path) {
+fn read_to_gen(path: &Path) -> Result<Generation, io::Error> {
+    return Ok(match toml::from_str(match file::read(path) {
         Ok(o) => o,
         Err(e) => {
             error!("Failed to read generation TOML file!");
@@ -114,6 +108,27 @@ fn read_to_gen(path: &str) -> Result<Generation, io::Error> {
             return Err(custom_error("Failed to parse TOML file!"));
         },
     });
+}
+
+// Does the generation specified exist?
+pub fn gen_exists(gen_id: usize) -> bool {
+    let path = places::gens().add_str(&gen_id.to_string()).add_str("gen.toml");
+
+    return path.exists();
+}
+
+// Get generation for the id
+pub fn get_gen_from_usize(gen_id: usize) -> Result<Generation, io::Error> {
+    let generation = read_to_gen(&places::gens().add_str(&gen_id.to_string()).add_str("gen.toml"))?;
+
+    return Ok(generation);
+}
+
+// Get generation commit for the id
+pub fn get_gen_commit_from_usize(gen_id: usize) -> Result<String, io::Error> {
+    let gen_commit = file::read(&places::gens().add_str(&gen_id.to_string()).add_str("commit"))?;
+
+    return Ok(gen_commit);
 }
 
 // Get latest generation number.
@@ -145,9 +160,9 @@ pub fn commit(msg: &str) -> Result<(), io::Error> {
         Err(e) => return Err(e),
     } + 1;
 
-    let gen_dir = format!("{}/{}", places::gens(), generation_number);
+    let gen_dir = places::gens().add_str(&generation_number.to_string());
 
-    match create_directory(gen_dir.as_str()) {
+    match directory::create(&gen_dir) {
         Ok(_o) => info!("Created generation directory."),
         Err(e) => {
             error!("Failed to create generation directory!");
@@ -169,15 +184,15 @@ pub fn commit(msg: &str) -> Result<(), io::Error> {
     };
 
     let files = vec![
-        (msg, format!("{}/commit", gen_dir)),
-        (user_gen_string.as_str(), format!("{}/gen.toml", gen_dir)),
+        (msg, gen_dir.add_str("commit")),
+        (user_gen_string.as_str(), gen_dir.add_str("gen.toml")),
     ];
 
     for i in files.iter() {
-        match write_file(i.0, i.1.as_str()) {
-            Ok(_o) => info!("Created file: {}", name_from_path(i.1.as_str())),
+        match file::write(i.0, &i.1) {
+            Ok(_o) => info!("Created file: {}", i.1.basename()),
             Err(e) => {
-                error!("Failed to create file: {}", i.1);
+                error!("Failed to create file: {}", i.1.basename());
                 return Err(e);
             },
         };
@@ -205,18 +220,15 @@ pub fn build() -> Result<(), io::Error> {
         Err(e) => return Err(e),
     };
 
-    match read_file(format!("{}/built", places::gens()).as_str()) {
+    match file::read(&places::gens().add_str("built")) {
         Ok(o) => {
-            let built_gen = match read_to_gen(format!("{}/{}/gen.toml", places::gens(), o.trim()).as_str()) {
-                Ok(o) => o,
-                Err(e) => return Err(e),
-            };
+            let built_gen = read_to_gen(&places::gens().add_str(o.trim()).add_str("gen.toml"))?;
 
-            let mut summary_entries: Vec<(String, Vec<History>)> = Vec::new();
+            let mut summary_entries: Vec<&Vec<History>> = Vec::new();
 
-            build_package_manager!(built_gen.pkgs, curr_gen.pkgs, pkg_manager, "Packages".to_string(), summary_entries);
-            build_package_manager!(built_gen.flatpaks, curr_gen.flatpaks, flatpak, "Flatpaks".to_string(), summary_entries);
-            build_package_manager!(built_gen.crates, curr_gen.crates, cargo, "Crates".to_string(), summary_entries);
+            build_package_manager!(built_gen.pkgs, curr_gen.pkgs, pkg_manager, summary_entries);
+            build_package_manager!(built_gen.flatpaks, curr_gen.flatpaks, flatpak, summary_entries);
+            build_package_manager!(built_gen.crates, curr_gen.crates, cargo, summary_entries);
 
             println!("");
             println!("");
@@ -228,12 +240,7 @@ pub fn build() -> Result<(), io::Error> {
 
             println!("");
 
-            for se in summary_entries.iter() {
-                info!("{}:", se.0);
-                print_history(&se.1);
-
-                println!("");
-            }
+            library::print_history_gen(&summary_entries);
 
             println!("");
             println!("");
@@ -302,7 +309,7 @@ pub fn set_current(to: usize) -> Result<(), io::Error> {
         return Err(custom_error("Out of range!"));
     }
 
-    match write_file(to.to_string().trim(), format!("{}/current", places::gens()).as_str()) {
+    match file::write(to.to_string().trim(), &places::gens().add_str("current")) {
         Ok(_o) => {
             info!("Set 'current' to: {}", to);
             return Ok(());
@@ -329,7 +336,7 @@ pub fn set_built(to: usize) -> Result<(), io::Error> {
         return Err(custom_error("Out of range!"));
     }
 
-    match write_file(to.to_string().trim(), format!("{}/built", places::gens()).as_str()) {
+    match file::write(to.to_string().trim(), &places::gens().add_str("built")) {
         Ok(_o) => {
             info!("Set 'built' to: {}", to);
             return Ok(());
@@ -343,7 +350,7 @@ pub fn set_built(to: usize) -> Result<(), io::Error> {
 
 // Get the 'current' generation number.
 pub fn get_current() -> Result<usize, io::Error> {
-    let contents = match read_file(format!("{}/current", places::gens()).as_str()) {
+    let contents = match file::read(&places::gens().add_str("current")) {
         Ok(o) => o,
         Err(e) => {
             error!("Failed to read 'current' file!");
@@ -374,7 +381,7 @@ pub fn get_built_no_output() -> Result<usize, io::Error> {
 
 // Get the currently built generation number. (CORE)
 pub fn get_built_core(output: bool) -> Result<usize, io::Error> {
-    let contents = match read_file(format!("{}/built", places::gens()).as_str()) {
+    let contents = match file::read(&places::gens().add_str("built")) {
         Ok(o) => o,
         Err(e) => {
             if output {
@@ -401,7 +408,7 @@ pub fn get_built_core(output: bool) -> Result<usize, io::Error> {
 
 // Has a generation been built yet?
 pub fn been_built() -> bool {
-    return path_exists(format!("{}/built", places::gens()).as_str());
+    return places::gens().add_str("built").exists();
 }
 
 // Delete old generations.
@@ -458,7 +465,7 @@ pub fn delete(generation: usize) -> Result<(), io::Error> {
         return Err(custom_error("Generation does not exist!"));
     }
 
-    match remove_directory(format!("{}/{}", places::gens(), generation).as_str()) {
+    match fs_action::delete(&places::gens().add_str(&generation.to_string())) {
         Ok(_o) => info!("Deleted generation: {}", generation),
         Err(e) => {
             error!("Failed to delete generation: {}", generation);
@@ -549,20 +556,20 @@ pub fn list_with_no_calls() -> Result<Vec<(String, String, bool, bool)>, io::Err
 
 // List all generations. (CORE)
 fn list_core(calls: bool) -> Result<Vec<(String, String, bool, bool)>, io::Error> {
-    let gen_listed = match list_directory(places::gens().as_str()) {
+    let gen_listed = match directory::list_items(&places::gens()) {
         Ok(o) => o,
         Err(e) => {
-            error!("Failed to list the generations directory! ({})", places::gens());
+            error!("Failed to list the generations directory! ({})", places::gens().to_string());
             return Err(e);
         },
     };
 
-    let mut generations: Vec<String> = Vec::new();
+    let mut generations: Vec<Path> = Vec::new();
 
-    for i in gen_listed.iter() {
-        match path_type(i) {
+    for i in gen_listed.into_iter() {
+        match i.path_type() {
             PathType::File => {},
-            PathType::Directory => generations.push(i.to_string()),
+            PathType::Directory => generations.push(i),
             PathType::Invalid => {
                 error!("Found invalid path! (Listing generations.)");
                 return Err(custom_error("Found invalid path."));
@@ -573,11 +580,8 @@ fn list_core(calls: bool) -> Result<Vec<(String, String, bool, bool)>, io::Error
     let mut gens_with_info: Vec<(String, String, bool, bool)> = Vec::new();
 
     for i in generations.iter() {
-        let generation_name = name_from_path(i);
-        let commit_msg = match read_file(format!("{}/commit", i).as_str()) {
-            Ok(o) => o,
-            Err(_e) => "<< COMMIT MESSAGE MISSING >>".to_string(),
-        };
+        let generation_name = i.basename();
+        let commit_msg = file::read(&i.add_str("commit")).unwrap_or(String::from("<< COMMIT MESSAGE MISSING >>"));
 
         let current_number: usize;
         let built_number: usize;
@@ -733,11 +737,11 @@ pub fn get_oldest() -> Result<usize, io::Error> {
 }
 
 // Get the 'current' generation TOML file.
-pub fn current_gen() -> Result<String, io::Error> {
+pub fn current_gen() -> Result<Path, io::Error> {
     let current = match get_current() {
         Ok(o) => o,
         Err(e) => return Err(e),
     };
 
-    return Ok(format!("{}/{}/gen.toml", places::gens(), current));
+    return Ok(places::gens().add_str(&current.to_string()).add_str("gen.toml"));
 }

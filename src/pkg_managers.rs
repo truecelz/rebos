@@ -39,9 +39,10 @@ pub mod cargo {
 }
 
 pub mod pkg_manager {
+    use fspp::*;
+
     use crate::pkg_managers_boilerplate::macros::*;
     use crate::error;
-    use crate::filesystem::*;
     use crate::library::*;
     use crate::places;
 
@@ -53,7 +54,7 @@ pub mod pkg_manager {
     enable_mode::sync!();
 
     fn get_manager() -> Result<PackageManager, io::Error> {
-        let mut package_manager: PackageManager = match toml::from_str(match read_file(format!("{}/pkg_manager.toml", places::base_user()).as_str()) {
+        let mut package_manager: PackageManager = match toml::from_str(match file::read(&places::base_user().add_str("pkg_manager.toml")) {
             Ok(o) => o,
             Err(e) => {
                 error!("Failed to read package manager TOML file!");

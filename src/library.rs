@@ -4,7 +4,10 @@ use std::io;
 use std::process::Command;
 use colored::Colorize;
 use users::get_current_username;
+use piglog::prelude::*;
+
 use crate::convert::*;
+use crate::generation::Generation;
 
 #[derive(PartialEq)]
 pub enum HistoryMode {
@@ -87,21 +90,52 @@ pub fn username() -> String {
     return username;
 }
 
-pub fn remove_string_vec_duplicates(dup_vec: &Vec<String>) -> Vec<String> {
-    let mut new_vec: Vec<String> = Vec::new();
+pub fn remove_array_duplicates<T: Clone + PartialEq>(dup_vec: &[T]) -> Vec<T> {
+    let mut new_vec: Vec<T> = Vec::new();
 
     for i in dup_vec.iter() {
         if new_vec.contains(i) == false {
-            new_vec.push(i.to_string());
+            new_vec.push(i.clone());
         }
     }
 
     return new_vec;
 }
 
-pub fn history(str_1: &str, str_2: &str) -> Vec<History> {
-    let lines_1 = remove_string_vec_duplicates(&str_to_string_vec(str_1, "\n"));
-    let lines_2 = remove_string_vec_duplicates(&str_to_string_vec(str_2, "\n"));
+pub fn history_gen(gen_1: &Generation, gen_2: &Generation) -> [Vec<History>; 3] {
+    let pkgs = history(&gen_1.pkgs, &gen_2.pkgs);
+    let flatpaks = history(&gen_1.flatpaks, &gen_2.flatpaks);
+    let crates = history(&gen_1.crates, &gen_2.crates);
+
+    return [pkgs, flatpaks, crates];
+}
+
+pub fn print_history_gen(history: &[&Vec<History>]) {
+    let titles = vec![
+        "Packages",
+        "Flatpaks",
+        "Crates",
+    ];
+
+    for i in 0..history.len() {
+        piglog::info!("{}:", titles[i]);
+
+        print_history(history[i]);
+    }
+}
+
+pub fn print_history(diff_vec: &Vec<History>) {
+    for i in diff_vec.iter() {
+        match i.mode {
+            HistoryMode::Add => println!("{}", format!("+ {}", i.line).bright_green().bold()),
+            HistoryMode::Remove => println!("{}", format!("- {}", i.line).bright_red().bold()),
+        };
+    }
+}
+
+pub fn history(array_1: &[String], array_2: &[String]) -> Vec<History> {
+    let lines_1 = remove_array_duplicates(array_1);
+    let lines_2 = remove_array_duplicates(array_2);
 
     let mut history_vec: Vec<History> = Vec::new();
 
@@ -128,20 +162,4 @@ pub fn history(str_1: &str, str_2: &str) -> Vec<History> {
     }
 
     return history_vec;
-}
-
-pub fn print_history(diff_vec: &Vec<History>) {
-    for i in diff_vec.iter() {
-        if i.mode == HistoryMode::Remove {
-            println!("{}", format!("- {}", i.line).red().bold());
-        }
-
-        else if i.mode == HistoryMode::Add {
-            println!("{}", format!("+ {}", i.line).green().bold());
-        }
-
-        else {
-            println!("{}", format!("  {}", i.line));
-        }
-    }
 }

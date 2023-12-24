@@ -3,9 +3,10 @@
 use std::collections::HashMap;
 use std::io;
 use serde::Deserialize;
+use piglog::prelude::*;
+use piglog::*;
+
 use crate::library::*;
-use crate::log::*;
-use crate::{info, error};
 
 #[derive(Deserialize, Debug, Default)]
 #[serde(deny_unknown_fields, default)]

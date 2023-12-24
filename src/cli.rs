@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use clap::{Parser, Subcommand};
-use crate::log::LogMode;
+use piglog::LogMode;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -57,6 +57,13 @@ pub enum GenCommands {
     DeleteOld(GenDeleteOld),
     /// Delete a specific generation
     Delete(GenDelete),
+    /// The difference between 2 generations
+    Diff {
+        /// Generation to act as base
+        old: usize,
+        /// Generation to act as changes
+        new: usize,
+    },
     /// Command related to the 'current' generation
     Current {
         #[command(subcommand)]
