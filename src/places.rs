@@ -29,9 +29,9 @@ pub fn setup() -> Result<(), io::Error> {
 
 
 
-/// The base directory of operations for Dister.
+/// The base directory of operations for Rebos.
 pub fn base() -> Path {
-    return dir::home().add_str(".dister-base");
+    return dir::home().add_str(".rebos-base");
 }
 
 /// The directory of generations.
@@ -39,7 +39,7 @@ pub fn gens() -> Path {
     return base().add_str("generations");
 }
 
-/// User's Dister config directory.
+/// User's Rebos config directory.
 pub fn base_user() -> Path {
-    return dir::config().add_str("dister");
+    return dir::config().add_str("rebos");
 }

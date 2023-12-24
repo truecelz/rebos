@@ -17,7 +17,7 @@ const DEFAULT_USER_GEN: &str =
 #    Generation File    #
 # --------------------- #
 
-# Other generation files to import. (Example: intensive_apps -> ~/.config/dister/imports/intensive_apps.toml)
+# Other generation files to import. (Example: intensive_apps -> ~/.config/rebos/imports/intensive_apps.toml)
 imports = [
     # \"intensive_apps\",
 ]

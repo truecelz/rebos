@@ -6,7 +6,7 @@ use piglog::LogMode;
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 #[command(propagate_version = true)]
-/// Make any Linux distribution reproducable!
+/// Make any Linux distribution reproducible!
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
@@ -21,7 +21,7 @@ pub enum Commands {
     },
     /// Run the program setup
     Setup,
-    /// Create a default Dister configuration
+    /// Create a default Rebos configuration
     InitConfig,
     /// API for things like scripting
     API {
@@ -32,12 +32,12 @@ pub enum Commands {
 
 #[derive(Subcommand, Debug)]
 pub enum APICommands {
-    /// Use the Dister log message system
+    /// Use the Rebos log message system
     Echo {
         log_mode: LogMode,
         message: String,
     },
-    /// Use the Dister log message system (Generic)
+    /// Use the Rebos log message system (Generic)
     EchoGeneric {
         message: String,
     },
