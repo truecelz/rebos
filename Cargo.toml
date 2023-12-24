@@ -1,8 +1,11 @@
 [package]
 name = "rebos"
 authors = ["Jackson Novak <jacksonnovak@proton.me>"]
-version = "1.5.1"
+version = "1.5.2"
 edition = "2021"
+description = "NixOS-like reproducibility for any Linux distro."
+license = "GPL-3.0-or-later"
+repository = "https://gitlab.com/Oglo12/rebos"
 
 [profile.bench]
 lto = "thin"
