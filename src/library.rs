@@ -121,6 +121,8 @@ pub fn print_history_gen(history: &[&Vec<History>]) {
         piglog::info!("{}:", titles[i]);
 
         print_history(history[i]);
+
+        println!("");
     }
 }
 
