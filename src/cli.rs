@@ -49,6 +49,12 @@ pub enum GenCommands {
     Commit(Commit),
     /// List all system generations
     List,
+    /// Delete duplicate generations
+    CleanDups,
+    /// Align all generation numbers (Example: [1, 4, 22, 35] -> [1, 2, 3, 4])
+    Align,
+    /// Automatically clean up the generations (clean-dups, align, etc...)
+    TidyUp,
     /// Get information on the generation in the user's config
     Info,
     /// Print out what the latest system generation number is

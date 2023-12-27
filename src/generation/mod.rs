@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+pub mod management;
+
 use std::io;
 use colored::Colorize;
 use serde::{Serialize, Deserialize};
@@ -472,6 +474,27 @@ pub fn delete(generation: usize) -> Result<(), io::Error> {
             return Err(e);
         },
     };
+
+    return Ok(());
+}
+
+// Move a generation to another spot. (Number -> Number)
+pub fn move_gen(from: usize, to: usize) -> Result<(), io::Error> {
+    let current = is_current(from)?;
+    let built = is_built(from)?;
+
+    let from_path = places::gens().add_str(&from.to_string());
+    let to_path = places::gens().add_str(&to.to_string());
+
+    fs_action::mv(&from_path, &to_path)?;
+
+    if current {
+        set_current(to)?;
+    }
+
+    if built {
+        set_built(to)?;
+    }
 
     return Ok(());
 }

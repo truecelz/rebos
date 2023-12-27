@@ -58,7 +58,7 @@ fn app() -> ExitCode {
     let args = cli::Cli::parse();
 
     match &args.command {
-        cli::Commands::Setup => {},
+        cli::Commands::Setup => (),
         _ => {
             if places::base().exists() == false {
                 error!("It seems that the program is not set up!");
@@ -75,20 +75,38 @@ fn app() -> ExitCode {
                     info!("Committing user generation...");
 
                     match generation::commit(c.msg.as_str()) {
-                        Ok(_o) => info!("Committed generation successfully! (\"{}\")", c.msg),
-                        Err(_e) => return ExitCode::Fail,
+                        Ok(_) => success!("Committed generation successfully! (\"{}\")", c.msg),
+                        Err(_) => return ExitCode::Fail,
                     };
                 },
                 cli::GenCommands::List => {
                     match generation::list_print() {
-                        Ok(_o) => {},
-                        Err(_e) => return ExitCode::Fail,
+                        Ok(_) => (),
+                        Err(_) => return ExitCode::Fail,
+                    };
+                },
+                cli::GenCommands::CleanDups => {
+                    match generation::management::clean_dups(true) {
+                        Ok(o) => success!("Deleted {o} generations!"),
+                        Err(_) => return ExitCode::Fail,
+                    };
+                },
+                cli::GenCommands::Align => {
+                    match generation::management::align(true) {
+                        Ok(o) => success!("Aligned {o} generations!"),
+                        Err(_) => return ExitCode::Fail,
+                    };
+                },
+                cli::GenCommands::TidyUp => {
+                    match generation::management::tidy_up() {
+                        Ok(_) => (),
+                        Err(_) => return ExitCode::Fail,
                     };
                 },
                 cli::GenCommands::Info => {
                     let generation = match generation::gen(ConfigSide::User) {
                         Ok(o) => o,
-                        Err(_e) => return ExitCode::Fail,
+                        Err(_) => return ExitCode::Fail,
                     };
 
                     obj_print::generation(&generation);
@@ -96,21 +114,21 @@ fn app() -> ExitCode {
                 cli::GenCommands::Latest => {
                     info!("Latest generation number is: {}", match generation::latest_number() {
                         Ok(o) => o,
-                        Err(_e) => return ExitCode::Fail,
+                        Err(_) => return ExitCode::Fail,
                     });
                 },
                 cli::GenCommands::DeleteOld(h) => {
                     info!("Deleting old generations...");
 
                     match generation::delete_old(h.how_many) {
-                        Ok(_o) => info!("Successfully deleted {} generations!", h.how_many),
-                        Err(_e) => return ExitCode::Fail,
+                        Ok(_) => success!("Successfully deleted {} generations!", h.how_many),
+                        Err(_) => return ExitCode::Fail,
                     };
                 },
                 cli::GenCommands::Delete(g) => {
                     match generation::delete(g.generation) {
-                        Ok(_o) => {}, // Handled by delete().
-                        Err(_e) => return ExitCode::Fail,
+                        Ok(_) => (), // Handled by delete().
+                        Err(_) => return ExitCode::Fail,
                     };
                 },
                 cli::GenCommands::Diff { old, new } => {
@@ -147,32 +165,32 @@ fn app() -> ExitCode {
                             info!("Building 'current' generation...");
 
                             match generation::build() {
-                                Ok(_o) => info!("Built generation successfully!"),
-                                Err(_e) => return ExitCode::Fail,
+                                Ok(_) => success!("Built generation successfully!"),
+                                Err(_) => return ExitCode::Fail,
                             };
                         },
                         cli::CurrentCommands::Rollback(r) => {
                             info!("Rolling back by {} generations...", r.by);
 
                             match generation::rollback(r.by) {
-                                Ok(_o) => info!("Rolled back successfully!"),
-                                Err(_e) => return ExitCode::Fail,
+                                Ok(_) => success!("Rolled back successfully!"),
+                                Err(_) => return ExitCode::Fail,
                             };
                         },
                         cli::CurrentCommands::ToLatest => {
                             info!("Jumping to latest generation...");
 
                             match generation::latest() {
-                                Ok(_o) => info!("Jumped to latest successfully!"),
-                                Err(_e) => return ExitCode::Fail,
+                                Ok(_) => success!("Jumped to latest successfully!"),
+                                Err(_) => return ExitCode::Fail,
                             };
                         },
                         cli::CurrentCommands::Set(s) => {
                             info!("Jumping to generation {}...", s.to);
 
                             match generation::set_current(s.to) {
-                                Ok(_o) => info!("Jumped to generation {} successfully!", s.to),
-                                Err(_e) => return ExitCode::Fail,
+                                Ok(_) => success!("Jumped to generation {} successfully!", s.to),
+                                Err(_) => return ExitCode::Fail,
                             };
                         },
                         _ => {
@@ -191,16 +209,16 @@ fn app() -> ExitCode {
             info!("Beginning setup...");
 
             match setup() {
-                Ok(_o) => info!("Set up the program successfully!"),
-                Err(_e) => return ExitCode::Fail,
+                Ok(_) => success!("Set up the program successfully!"),
+                Err(_) => return ExitCode::Fail,
             };
         },
         cli::Commands::InitConfig => {
             info!("Creating user configuration...");
 
             match config::init_user_config() {
-                Ok(_o) => info!("Created user configuration successfully!"),
-                Err(_e) => return ExitCode::Fail,
+                Ok(_) => success!("Created user configuration successfully!"),
+                Err(_) => return ExitCode::Fail,
             };
         },
         cli::Commands::API { command } => {
@@ -225,7 +243,7 @@ fn app() -> ExitCode {
 // Function that sets up the program.
 fn setup() -> Result<(), io::Error> {
     match places::setup() {
-        Ok(_o) => info!("Core directories verified successfully!"),
+        Ok(_) => success!("Core directories verified successfully!"),
         Err(e) => return Err(e),
     };
 
