@@ -200,7 +200,7 @@ pub fn commit(msg: &str) -> Result<(), io::Error> {
         };
     }
 
-    match set_current(generation_number) {
+    match set_current(generation_number, true) {
         Ok(_o) => {},
         Err(e) => return Err(e),
     };
@@ -256,7 +256,7 @@ pub fn build() -> Result<(), io::Error> {
         },
     };
 
-    match set_built(current_num) {
+    match set_built(current_num, true) {
         Ok(_o) => {},
         Err(e) => return Err(e),
     };
@@ -267,7 +267,7 @@ pub fn build() -> Result<(), io::Error> {
 }
 
 // Set the 'current' generation to another older generation.
-pub fn rollback(by: isize) -> Result<(), io::Error> {
+pub fn rollback(by: isize, verbose: bool) -> Result<(), io::Error> {
     let current_num = match get_current() {
         Ok(o) => o,
         Err(e) => return Err(e),
@@ -275,7 +275,7 @@ pub fn rollback(by: isize) -> Result<(), io::Error> {
 
     let new_current = (current_num as isize) - by;
 
-    match set_current(new_current as usize) {
+    match set_current(new_current as usize, verbose) {
         Ok(_o) => {},
         Err(e) => return Err(e),
     };
@@ -284,11 +284,11 @@ pub fn rollback(by: isize) -> Result<(), io::Error> {
 }
 
 // Set the 'current' generation to the latest generation.
-pub fn latest() -> Result<(), io::Error> {
+pub fn latest(verbose: bool) -> Result<(), io::Error> {
     match set_current(match latest_number() {
         Ok(o) => o,
         Err(e) => return Err(e),
-    }) {
+    }, verbose) {
         Ok(_o) => {},
         Err(e) => return Err(e),
     };
@@ -297,7 +297,7 @@ pub fn latest() -> Result<(), io::Error> {
 }
 
 // Set the 'current' generation to a specific generation.
-pub fn set_current(to: usize) -> Result<(), io::Error> {
+pub fn set_current(to: usize, verbose: bool) -> Result<(), io::Error> {
     if to > match latest_number() {
         Ok(o) => o,
         Err(e) => return Err(e),
@@ -312,8 +312,11 @@ pub fn set_current(to: usize) -> Result<(), io::Error> {
     }
 
     match file::write(to.to_string().trim(), &places::gens().add_str("current")) {
-        Ok(_o) => {
-            info!("Set 'current' to: {}", to);
+        Ok(_) => {
+            if verbose {
+                info!("Set 'current' to: {}", to);
+            }
+
             return Ok(());
         },
         Err(e) => {
@@ -324,7 +327,7 @@ pub fn set_current(to: usize) -> Result<(), io::Error> {
 }
 
 // Set the 'built' generation to a specific generation.
-pub fn set_built(to: usize) -> Result<(), io::Error> {
+pub fn set_built(to: usize, verbose: bool) -> Result<(), io::Error> {
     if to > match latest_number() {
         Ok(o) => o,
         Err(e) => return Err(e),
@@ -340,7 +343,10 @@ pub fn set_built(to: usize) -> Result<(), io::Error> {
 
     match file::write(to.to_string().trim(), &places::gens().add_str("built")) {
         Ok(_o) => {
-            info!("Set 'built' to: {}", to);
+            if verbose {
+                info!("Set 'built' to: {}", to);
+            }
+
             return Ok(());
         },
         Err(e) => {
@@ -414,7 +420,7 @@ pub fn been_built() -> bool {
 }
 
 // Delete old generations.
-pub fn delete_old(how_many: usize) -> Result<(), io::Error> {
+pub fn delete_old(how_many: usize, verbose: bool) -> Result<(), io::Error> {
     let offset = match get_oldest() {
         Ok(o) => o,
         Err(e) => return Err(e),
@@ -430,8 +436,8 @@ pub fn delete_old(how_many: usize) -> Result<(), io::Error> {
             break;
         }
 
-        match delete(i) {
-            Ok(_o) => {}, // This is a rare instance where the matched function actually did the info!() itself!
+        match delete(i, verbose) {
+            Ok(_) => (), // This is a rare instance where the matched function actually did the info!() itself!
             Err(e) => return Err(e),
         };
     }
@@ -440,7 +446,7 @@ pub fn delete_old(how_many: usize) -> Result<(), io::Error> {
 }
 
 // Delete a specific generation.
-pub fn delete(generation: usize) -> Result<(), io::Error> {
+pub fn delete(generation: usize, verbose: bool) -> Result<(), io::Error> {
     if match is_current(generation) {
         Ok(o) => o,
         Err(e) => return Err(e),
@@ -468,7 +474,11 @@ pub fn delete(generation: usize) -> Result<(), io::Error> {
     }
 
     match fs_action::delete(&places::gens().add_str(&generation.to_string())) {
-        Ok(_o) => info!("Deleted generation: {}", generation),
+        Ok(_) => {
+            if verbose {
+                info!("Deleted generation: {}", generation);
+            }
+        },
         Err(e) => {
             error!("Failed to delete generation: {}", generation);
             return Err(e);
@@ -479,7 +489,7 @@ pub fn delete(generation: usize) -> Result<(), io::Error> {
 }
 
 // Move a generation to another spot. (Number -> Number)
-pub fn move_gen(from: usize, to: usize) -> Result<(), io::Error> {
+pub fn move_gen(from: usize, to: usize, verbose: bool) -> Result<(), io::Error> {
     let current = is_current(from)?;
     let built = is_built(from)?;
 
@@ -488,12 +498,16 @@ pub fn move_gen(from: usize, to: usize) -> Result<(), io::Error> {
 
     fs_action::mv(&from_path, &to_path)?;
 
+    if verbose {
+        info!("Moved generation: {from} -> {to}");
+    }
+
     if current {
-        set_current(to)?;
+        set_current(to, verbose)?;
     }
 
     if built {
-        set_built(to)?;
+        set_built(to, verbose)?;
     }
 
     return Ok(());

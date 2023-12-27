@@ -18,17 +18,43 @@ pub fn clean_dups(verbose: bool) -> Result<usize, io::Error> {
     gen_nums.sort();
 
     let mut comparison: Option<super::Generation> = None;
+    let mut comp_num: Option<usize> = None;
 
     for i in gen_nums {
         let generation = super::get_gen_from_usize(i)?;
 
         if let Some(ref s) = comparison {
             if generation == *s {
+                let current = super::is_current(i)?;
+                let built = super::is_built(i)?;
+
                 if verbose {
                     piglog::info!("Deleting generation: {i}");
                 }
 
-                match super::delete(i) {
+                if current {
+                    match super::set_current(comp_num.unwrap(), verbose) {
+                        Ok(_) => (),
+                        Err(e) => {
+                            piglog::fatal!("Failed to set 'current' generation!");
+
+                            return Err(e);
+                        },
+                    };
+                }
+
+                if built {
+                    match super::set_built(comp_num.unwrap(), verbose) {
+                        Ok(_) => (),
+                        Err(e) => {
+                            piglog::fatal!("Failed to set 'built' generation!");
+
+                            return Err(e);
+                        },
+                    };
+                }
+
+                match super::delete(i, verbose) {
                     Ok(_) => (),
                     Err(e) => {
                         piglog::fatal!("Failed to delete generation: {i}");
@@ -42,11 +68,13 @@ pub fn clean_dups(verbose: bool) -> Result<usize, io::Error> {
 
             else {
                 comparison = Some(generation);
+                comp_num = Some(i);
             }
         }
 
         else {
             comparison = Some(generation);
+            comp_num = Some(i);
         }
     }
 
@@ -69,7 +97,7 @@ pub fn align(verbose: bool) -> Result<usize, io::Error> {
                 piglog::info!("Moving: {i} -> {new_number}");
             }
 
-            match super::move_gen(i, new_number) {
+            match super::move_gen(i, new_number, verbose) {
                 Ok(_) => (),
                 Err(e) => {
                     piglog::fatal!("Failed to move generation {i} to {new_number}!");

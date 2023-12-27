@@ -120,13 +120,13 @@ fn app() -> ExitCode {
                 cli::GenCommands::DeleteOld(h) => {
                     info!("Deleting old generations...");
 
-                    match generation::delete_old(h.how_many) {
+                    match generation::delete_old(h.how_many, true) {
                         Ok(_) => success!("Successfully deleted {} generations!", h.how_many),
                         Err(_) => return ExitCode::Fail,
                     };
                 },
                 cli::GenCommands::Delete(g) => {
-                    match generation::delete(g.generation) {
+                    match generation::delete(g.generation, true) {
                         Ok(_) => (), // Handled by delete().
                         Err(_) => return ExitCode::Fail,
                     };
@@ -149,7 +149,7 @@ fn app() -> ExitCode {
                     let history: Vec<&Vec<History>> = history.iter().collect();
 
                     println!(
-                        "{} {} {}",
+                        "\n{} {} {}",
                         commit_1.bright_cyan().bold(),
                         "->".bright_black().bold(),
                         commit_2.bright_cyan().bold()
@@ -172,7 +172,7 @@ fn app() -> ExitCode {
                         cli::CurrentCommands::Rollback(r) => {
                             info!("Rolling back by {} generations...", r.by);
 
-                            match generation::rollback(r.by) {
+                            match generation::rollback(r.by, true) {
                                 Ok(_) => success!("Rolled back successfully!"),
                                 Err(_) => return ExitCode::Fail,
                             };
@@ -180,7 +180,7 @@ fn app() -> ExitCode {
                         cli::CurrentCommands::ToLatest => {
                             info!("Jumping to latest generation...");
 
-                            match generation::latest() {
+                            match generation::latest(true) {
                                 Ok(_) => success!("Jumped to latest successfully!"),
                                 Err(_) => return ExitCode::Fail,
                             };
@@ -188,7 +188,7 @@ fn app() -> ExitCode {
                         cli::CurrentCommands::Set(s) => {
                             info!("Jumping to generation {}...", s.to);
 
-                            match generation::set_current(s.to) {
+                            match generation::set_current(s.to, true) {
                                 Ok(_) => success!("Jumped to generation {} successfully!", s.to),
                                 Err(_) => return ExitCode::Fail,
                             };
