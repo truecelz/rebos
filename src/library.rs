@@ -5,6 +5,7 @@ use std::process::Command;
 use colored::Colorize;
 use users::get_current_username;
 use piglog::prelude::*;
+use hashbrown::HashMap;
 
 use crate::convert::*;
 use crate::generation::Generation;
@@ -25,10 +26,10 @@ pub fn abort() { // Try not to use this function!
 }
 
 pub fn run_command(command: &str) -> bool {
-    return match Command::new("bash").args(["-c", command]).status() {
+    match Command::new("bash").args(["-c", command]).status() {
         Ok(o) => o,
         Err(_e) => return false,
-    }.success();
+    }.success()
 }
 
 pub fn cut(full: &str, fword: u32, dword: char) -> String {
@@ -40,7 +41,7 @@ pub fn cut(full: &str, fword: u32, dword: char) -> String {
         return String::from("");
     }
 
-    return vecced[fspot as usize].to_string();
+    vecced[fspot as usize].to_string()
 }
 
 pub fn sed(full: &str, replace: &str, with: &str) -> String {
@@ -60,24 +61,24 @@ pub fn sed(full: &str, replace: &str, with: &str) -> String {
         }
     }
 
-    return phrase;
+    phrase
 }
 
 pub fn name_from_path(path: &str) -> String {
     let converted = str_to_string_vec(path, "/");
 
-    return converted[converted.len() - 1].to_string();
+    converted[converted.len() - 1].to_string()
 }
 
 pub fn custom_error(error: &str) -> io::Error {
-    return io::Error::new(io::ErrorKind::Other, error);
+    io::Error::new(io::ErrorKind::Other, error)
 }
 
 pub fn is_root_user() -> bool {
     if username() == "root" {
-        return true;
+        true
     } else {
-        return false;
+        false
     }
 }
 
@@ -87,7 +88,7 @@ pub fn username() -> String {
         None => panic!("Unable to get username!"),
     };
 
-    return username;
+    username
 }
 
 pub fn remove_array_duplicates<T: Clone + PartialEq>(dup_vec: &[T]) -> Vec<T> {
@@ -99,28 +100,44 @@ pub fn remove_array_duplicates<T: Clone + PartialEq>(dup_vec: &[T]) -> Vec<T> {
         }
     }
 
-    return new_vec;
+    new_vec
 }
 
-pub fn history_gen(gen_1: &Generation, gen_2: &Generation) -> [Vec<History>; 3] {
-    let pkgs = history(&gen_1.pkgs, &gen_2.pkgs);
-    let flatpaks = history(&gen_1.flatpaks, &gen_2.flatpaks);
-    let crates = history(&gen_1.crates, &gen_2.crates);
+pub fn history_gen(gen_1: &Generation, gen_2: &Generation) -> HashMap<String, Vec<History>> {
+    let mut history_map: HashMap<String, Vec<History>> = HashMap::new();
 
-    return [pkgs, flatpaks, crates];
+    for i in gen_2.pkg_managers.keys() {
+        let pkgs_2 = gen_2.pkg_managers.get(i).unwrap();
+
+        match gen_1.pkg_managers.get(i) {
+            Some(pkgs_1) => history_map.insert(i.to_string(), history(&pkgs_1.pkgs, &pkgs_2.pkgs)),
+            None => history_map.insert(i.to_string(), pkgs_2.pkgs.iter().map(|x| History {
+                mode: HistoryMode::Add,
+                line: x.to_string(),
+            }).collect()),
+        };
+    }
+
+    for i in gen_1.pkg_managers.keys() {
+        let pkgs_1 = gen_1.pkg_managers.get(i).unwrap();
+
+        match gen_2.pkg_managers.get(i) {
+            Some(_) => (),
+            None => { history_map.insert(i.to_string(), pkgs_1.pkgs.iter().map(|x| History {
+                mode: HistoryMode::Remove,
+                line: x.to_string(),
+            }).collect()); },
+        };
+    }
+
+    history_map
 }
 
-pub fn print_history_gen(history: &[&Vec<History>]) {
-    let titles = vec![
-        "Packages",
-        "Flatpaks",
-        "Crates",
-    ];
+pub fn print_history_gen(history: &HashMap<String, Vec<History>>) {
+    for i in history.keys() {
+        piglog::info!("{}:", i);
 
-    for i in 0..history.len() {
-        piglog::info!("{}:", titles[i]);
-
-        print_history(history[i]);
+        print_history(history.get(i).unwrap());
 
         println!("");
     }
@@ -163,5 +180,5 @@ pub fn history(array_1: &[String], array_2: &[String]) -> Vec<History> {
         }
     }
 
-    return history_vec;
+    history_vec
 }

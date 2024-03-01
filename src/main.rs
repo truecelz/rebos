@@ -4,15 +4,12 @@ mod convert; // Convert one type to another type.
 mod places; // Where is stuff stored?
 mod cli; // For argument parsing and command structuring.
 mod generation; // The generations system.
-mod generation_boilerplate; // Boilerplate code for generations system.
 mod config; // Configuration stuff.
 mod dir; // Interfacing with the dirs crate.
 mod obj_print; // Print objects.
 mod obj_print_boilerplate; // Boilerplate code for obj print.
 mod package_management; // Stuff related to package management.
 mod system; // Used for getting system information.
-mod pkg_managers; // Package managers.
-mod pkg_managers_boilerplate; // Boilerplate code for package managers.
 mod hook; // Hook stuff.
 
 // Import stuff from source files and crates.
@@ -145,8 +142,6 @@ fn app() -> ExitCode {
                     let commit_2 = generation::get_gen_commit_from_usize(*new).unwrap();
 
                     let history = library::history_gen(&gen_1, &gen_2);
-
-                    let history: Vec<&Vec<History>> = history.iter().collect();
 
                     println!(
                         "\n{} {} {}",

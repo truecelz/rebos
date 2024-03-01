@@ -23,17 +23,17 @@ imports = [
 ]
 
 # Packages to be installed via the native package manager.
-pkgs = [
+pkg_manager.system.pkgs = [
     # \"git\",
 ]
 
 # Packages to be installed via Flatpak.
-flatpaks = [
+pkg_managers.flatpak.pkgs = [
     # \"com.github.tchx84.Flatseal\",
 ]
 
 # Packages to be installed via Cargo.
-crates = [
+pkg_managers.cargo.pkgs = [
     # \"bacon\",
 ]
 ";
@@ -54,11 +54,36 @@ remove = \"\" # Example: sudo apt remove #:?
 sync = \"\" # Example: sudo apt update
 upgrade = \"\" # Example: sudo apt upgrade
 
+plural_name = \"system packages\"
+
 # ------------------------------- #
 #    Additional configuration.    #
 # ------------------------------- #
 
 # many_pkg_args = BOOL: Can you supply many packages as an argument? Example: 'sudo apt install git vim wget'
+
+config = { many_pkg_args = true }
+";
+
+const DEFAULT_FLATPAK_MANAGER_CONFIG: &str =
+"# Flatpak
+
+install = \"flatpak install #:?\"
+remove = \"flatpak uninstall #:?\"
+upgrade = \"flatpak upgrade\"
+
+plural_name = \"flatpaks\"
+
+config = { many_pkg_args = true }
+";
+
+const DEFAULT_CARGO_MANAGER_CONFIG: &str =
+"# Cargo
+
+install = \"cargo install #:?\"
+remove = \"cargo uninstall #:?\"
+
+plural_name = \"crates\"
 
 config = { many_pkg_args = true }
 ";
@@ -89,6 +114,7 @@ pub fn init_user_config() -> Result<(), io::Error> {
         places::base_user().add_str("machines").add_str(&system_hostname),
         places::base_user().add_str("imports"),
         places::base_user().add_str("hooks"),
+        places::base_user().add_str("pkg_managers"),
     ];
 
     for i in directories.iter() {
@@ -106,7 +132,9 @@ pub fn init_user_config() -> Result<(), io::Error> {
     let files = vec![
         (DEFAULT_USER_GEN, config::config_for(Config::Generation, ConfigSide::User)),
         (DEFAULT_USER_GEN, places::base_user().add_str("machines").add_str(&system_hostname).add_str("gen.toml")),
-        (DEFAULT_PACKAGE_MANAGER_CONFIG, places::base_user().add_str("pkg_manager.toml")),
+        (DEFAULT_PACKAGE_MANAGER_CONFIG, places::base_user().add_str("pkg_managers/system.toml")),
+        (DEFAULT_FLATPAK_MANAGER_CONFIG, places::base_user().add_str("pkg_managers/flatpak.toml")),
+        (DEFAULT_CARGO_MANAGER_CONFIG, places::base_user().add_str("pkg_managers/cargo.toml")),
     ];
 
     for i in files.iter() {
@@ -121,7 +149,7 @@ pub fn init_user_config() -> Result<(), io::Error> {
         }
     }
 
-    return Ok(());
+    Ok(())
 }
 
 // Return path for a config file.

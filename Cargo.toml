@@ -1,9 +1,9 @@
 [package]
 name = "rebos"
 authors = ["Jackson Novak <jacksonnovak@proton.me>"]
-version = "1.6.1"
+version = "2.0.0"
 edition = "2021"
-description = "NixOS-like reproducibility for any Linux distro."
+description = "NixOS-like repeatability for any Linux distro."
 license = "GPL-3.0-or-later"
 repository = "https://gitlab.com/Oglo12/rebos"
 
@@ -24,6 +24,7 @@ clap = {version = "4.4.3", features = ["derive"]}
 colored = "2.0.4"
 dirs = "5.0.1"
 fspp = "2.0.0"
+hashbrown = { version = "0.14.3", features = ["serde"] }
 hostname = "0.3.1"
 piglog = { version = "1.4.1", features = ["clap_derive"] }
 serde = {version = "1.0.188", features = ["derive"]}

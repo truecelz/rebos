@@ -1,12 +1,12 @@
 #![allow(dead_code)]
 
-use std::collections::HashMap;
 use std::io;
 use serde::Deserialize;
+use hashbrown::HashMap;
 use piglog::prelude::*;
 use piglog::*;
 
-use crate::library::*;
+use crate::library::{ self, * };
 
 #[derive(Deserialize, Debug, Default)]
 #[serde(deny_unknown_fields, default)]
@@ -21,16 +21,56 @@ pub struct PackageManager {
 
 impl PackageManager {
     pub fn config_value(&self, key: &str) -> Result<bool, io::Error> {
-        return match self.config.get(key) {
-            Some(s) => Ok(*s),
+        Ok(match self.config.get(key) {
+            Some(s) => *s,
             None => {
                 error!("Missing keyword in package manager configuration! ({})", key);
                 return Err(custom_error("Missing keyword in package manager config!"));
             },
-        };
+        })
     }
 
-    pub fn install(&self, pkgs: &str) -> Result<(), io::Error> {
+    pub fn install(&self, pkgs: &[String]) -> Result<(), io::Error> {
+        let many = self.config_value("many_pkg_args")?;
+
+        crate::hook::run_hook_and_return_if_err!(format!("pre_{}_install", self.plural_name));
+
+        if many {
+            self.install_raw(&pkgs.join(" "))?;
+        }
+
+        else {
+            for i in pkgs {
+                self.install_raw(i)?;
+            }
+        }
+
+        crate::hook::run_hook_and_return_if_err!(format!("post_{}_install", self.plural_name));
+
+        Ok(())
+    }
+
+    pub fn remove(&self, pkgs: &[String]) -> Result<(), io::Error> {
+        let many = self.config_value("many_pkg_args")?;
+
+        crate::hook::run_hook_and_return_if_err!(format!("pre_{}_remove", self.plural_name));
+
+        if many {
+            self.install_raw(&pkgs.join(" "))?;
+        }
+
+        else {
+            for i in pkgs {
+                self.install_raw(i)?;
+            }
+        }
+
+        crate::hook::run_hook_and_return_if_err!(format!("post_{}_remove", self.plural_name));
+
+        Ok(())
+    }
+
+    fn install_raw(&self, pkgs: &str) -> Result<(), io::Error> {
         match run_command(sed(self.install.as_str(), "#:?", pkgs).as_str()) {
             true => info!("Successfully installed {}!", self.plural_name),
             false => {
@@ -40,10 +80,10 @@ impl PackageManager {
             },
         };
 
-        return Ok(());
+        Ok(())
     }
 
-    pub fn remove(&self, pkgs: &str) -> Result<(), io::Error> {
+    fn remove_raw(&self, pkgs: &str) -> Result<(), io::Error> {
         match run_command(sed(self.remove.as_str(), "#:?", pkgs).as_str()) {
             true => info!("Successfully removed {}!", self.plural_name),
             false => {
@@ -53,10 +93,12 @@ impl PackageManager {
             },
         };
 
-        return Ok(());
+        Ok(())
     }
 
     pub fn sync(&self) -> Result<(), io::Error> {
+        crate::hook::run_hook_and_return_if_err!(format!("pre_{}_sync", self.plural_name));
+
         match run_command(self.sync.as_str()) {
             true => info!("Successfully installed repositories!"),
             false => {
@@ -66,10 +108,14 @@ impl PackageManager {
             },
         };
 
-        return Ok(());
+        crate::hook::run_hook_and_return_if_err!(format!("post_{}_sync", self.plural_name));
+
+        Ok(())
     }
 
     pub fn upgrade(&self) -> Result<(), io::Error> {
+        crate::hook::run_hook_and_return_if_err!(format!("pre_{}_upgrade", self.plural_name));
+
         match run_command(self.upgrade.as_str()) {
             true => info!("Successfully upgraded {}!", self.plural_name),
             false => {
@@ -79,7 +125,9 @@ impl PackageManager {
             },
         };
 
-        return Ok(());
+        crate::hook::run_hook_and_return_if_err!(format!("post_{}_upgrade", self.plural_name));
+
+        Ok(())
     }
 
     pub fn set_plural_name(&mut self, pn: &str) {
@@ -91,17 +139,17 @@ impl PackageManager {
 
         hm.insert("many_pkg_args".to_string(), true);
 
-        return hm;
+        hm
     }
 
     pub fn default() -> Self {
-        return Self {
+        Self {
             install: String::new(),
             remove: String::new(),
             sync: String::new(),
             upgrade: String::new(),
             config: Self::return_config_hashmap_default(),
             plural_name: String::from("PACKAGES FROM UNKNOWN PACKAGE MANAGER"),
-        };
+        }
     }
 }

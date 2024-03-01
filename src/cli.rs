@@ -6,7 +6,7 @@ use piglog::LogMode;
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 #[command(propagate_version = true)]
-/// Make any Linux distribution reproducible!
+/// Make any Linux distribution repeatable!
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
