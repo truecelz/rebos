@@ -71,6 +71,10 @@ impl PackageManager {
     }
 
     fn install_raw(&self, pkgs: &str) -> Result<(), io::Error> {
+        if pkgs.trim() == "" {
+            return Ok(());
+        }
+
         match run_command(sed(self.install.as_str(), "#:?", pkgs).as_str()) {
             true => info!("Successfully installed {}!", self.plural_name),
             false => {
@@ -84,6 +88,10 @@ impl PackageManager {
     }
 
     fn remove_raw(&self, pkgs: &str) -> Result<(), io::Error> {
+        if pkgs.trim() == "" {
+            return Ok(());
+        }
+
         match run_command(sed(self.remove.as_str(), "#:?", pkgs).as_str()) {
             true => info!("Successfully removed {}!", self.plural_name),
             false => {
