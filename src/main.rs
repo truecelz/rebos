@@ -5,7 +5,6 @@ mod places; // Where is stuff stored?
 mod cli; // For argument parsing and command structuring.
 mod generation; // The generations system.
 mod config; // Configuration stuff.
-mod dir; // Interfacing with the dirs crate.
 mod obj_print; // Print objects.
 mod obj_print_boilerplate; // Boilerplate code for obj print.
 mod package_management; // Stuff related to package management.
@@ -20,6 +19,7 @@ use config::ConfigSide;
 use colored::Colorize;
 use piglog::prelude::*;
 use piglog::*;
+use fspp::*;
 
 // The exit code for the program.
 #[derive(PartialEq)]
@@ -33,9 +33,10 @@ fn test_code() {
 }
 
 // We are using main() to run another function, and exit according to the exit code.
-fn main() {
-    if app() == ExitCode::Fail {
-        std::process::exit(1);
+fn main() -> std::process::ExitCode {
+    match app() {
+        ExitCode::Success => std::process::ExitCode::SUCCESS,
+        ExitCode::Fail => std::process::ExitCode::FAILURE,
     }
 }
 
@@ -51,6 +52,36 @@ fn app() -> ExitCode {
 
         false => {},
     };
+
+    // Migration for legacy directory location! ($HOME/.rebos-base -> $XDG_STATE_HOME/rebos)
+    if places::base_legacy().exists() {
+        warning!("Detected Rebos base at legacy location, moving it to new location...");
+        generic!("'{}' -> '{}'", places::base_legacy().to_string(), places::base().to_string());
+
+        if places::base().exists() {
+            match fs_action::delete(&places::base()) {
+                Ok(_) => (),
+                Err(e) => {
+                    fatal!("Failed to delete directory: '{}'", places::base().to_string());
+                    println!("{e:#?}");
+
+                    return ExitCode::Fail;
+                },
+            };
+        }
+
+        match fs_action::mv(&places::base_legacy(), &places::base()) {
+            Ok(_) => (),
+            Err(e) => {
+                fatal!("Failed to move directory ('{}') to new location: '{}'", places::base_legacy().to_string(), places::base().to_string());
+                println!("{e:#?}");
+
+                return ExitCode::Fail;
+            },
+        };
+
+        success!("Moved Rebos base directory to new location!");
+    }
 
     let args = cli::Cli::parse();
 

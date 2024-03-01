@@ -5,9 +5,7 @@ use piglog::prelude::*;
 use piglog::*;
 use fspp::*;
 
-use crate::dir;
-
-// The setup function for the directories.
+// The setup function for the directories
 pub fn setup() -> Result<(), io::Error> {
     let directories = vec![
         base(),
@@ -24,22 +22,27 @@ pub fn setup() -> Result<(), io::Error> {
         };
     }
 
-    return Ok(());
+    Ok(())
 }
 
 
 
-/// The base directory of operations for Rebos.
+/// The base directory of operations for Rebos (Legacy)
+pub fn base_legacy() -> Path {
+    location::home().unwrap().add_str(".rebos-base")
+}
+
+/// The base directory of operations for Rebos
 pub fn base() -> Path {
-    return dir::home().add_str(".rebos-base");
+    location::state().unwrap().add_str("rebos")
 }
 
-/// The directory of generations.
+/// The directory of generations
 pub fn gens() -> Path {
-    return base().add_str("generations");
+    base().add_str("generations")
 }
 
-/// User's Rebos config directory.
+/// User's Rebos config directory
 pub fn base_user() -> Path {
-    return dir::config().add_str("rebos");
+    location::config().unwrap().add_str("rebos")
 }

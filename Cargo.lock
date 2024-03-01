@@ -188,10 +188,11 @@ checksum = "42703706b716c37f96a77aea830392ad231f44c9e9a67872fa5548707e11b11c"
 
 [[package]]
 name = "fspp"
-version = "2.0.0"
+version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "66ff47694b926a3e50009384077272213f56f2dbaf58ae53df9ae620b5d1050f"
+checksum = "7e27ae391804de84dc7f8d684dab8cfdb1d8449ba76a4ea14f156cde0bbd90b5"
 dependencies = [
+ "dirs",
  "fs_extra",
  "walkdir",
 ]
@@ -340,11 +341,10 @@ dependencies = [
 
 [[package]]
 name = "rebos"
-version = "2.0.2"
+version = "2.0.3"
 dependencies = [
  "clap",
  "colored",
- "dirs",
  "fspp",
  "hashbrown",
  "hostname",
