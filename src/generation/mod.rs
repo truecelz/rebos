@@ -157,7 +157,7 @@ fn read_to_gen(path: &Path) -> Result<Generation, io::Error> {
     Ok(match toml::from_str(&gen_string) {
         Ok(o) => o,
         Err(e) => {
-            warning!("Failed to deserialize generation, attempting legacy mode...");
+            warning!("Failed to deserialize generation, attempting legacy mode... ('{}')", path.to_string());
 
             let legacy: GenerationLegacy = match toml::from_str(&gen_string) {
                 Ok(o) => o,
