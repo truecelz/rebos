@@ -56,12 +56,12 @@ impl PackageManager {
         crate::hook::run_hook_and_return_if_err!(format!("pre_{}_remove", self.plural_name));
 
         if many {
-            self.install_raw(&pkgs.join(" "))?;
+            self.remove_raw(&pkgs.join(" "))?;
         }
 
         else {
             for i in pkgs {
-                self.install_raw(i)?;
+                self.remove_raw(i)?;
             }
         }
 
