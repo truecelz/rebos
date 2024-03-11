@@ -4,10 +4,12 @@ macro_rules! run_hook_and_return_if_err {
     (
         $hook_name: expr
     ) => {
-        if crate::places::base_user().add_str("hooks").add_str(&format!("{}", $hook_name)).exists() {
+        let macro_hook_path = crate::places::base_user().add_str("hooks").add_str(&format!("{}", $hook_name).replace(" ", "_"));
+
+        if macro_hook_path.exists() {
             crate::info!("Running hook: {}", $hook_name);
 
-            match library::run_command(&crate::places::base_user().add_str("hooks").add_str(&format!("{}", $hook_name).replace(" ", "_")).to_string()) {
+            match library::run_command(&macro_hook_path.to_string()) {
                 true => crate::info!("Successfully ran hook: {}", $hook_name),
                 false => {
                     crate::error!("Failed to run hook: {}", $hook_name);
@@ -16,6 +18,8 @@ macro_rules! run_hook_and_return_if_err {
                 },
             };
         }
+
+        std::mem::drop(macro_hook_path);
     }
 }
 
