@@ -23,7 +23,7 @@ imports = [
 ]
 
 # Packages to be installed via the native package manager.
-pkg_manager.system.pkgs = [
+pkg_managers.system.pkgs = [
     # \"git\",
 ]
 
