@@ -226,14 +226,6 @@ pub fn commit(msg: &str) -> Result<(), io::Error> {
 
     let gen_dir = places::gens().add_str(&generation_number.to_string());
 
-    match directory::create(&gen_dir) {
-        Ok(_o) => info!("Created generation directory."),
-        Err(e) => {
-            error!("Failed to create generation directory!");
-            return Err(e);
-        },
-    };
-
     let user_gen = match gen(ConfigSide::User) {
         Ok(o) => o,
         Err(e) => return Err(e),
@@ -247,6 +239,14 @@ pub fn commit(msg: &str) -> Result<(), io::Error> {
         },
     };
 
+    match directory::create(&gen_dir) {
+        Ok(_) => info!("Created generation directory."),
+        Err(e) => {
+            error!("Failed to create generation directory!");
+            return Err(e);
+        },
+    };
+
     let files = vec![
         (msg, gen_dir.add_str("commit")),
         (user_gen_string.as_str(), gen_dir.add_str("gen.toml")),
@@ -257,6 +257,15 @@ pub fn commit(msg: &str) -> Result<(), io::Error> {
             Ok(_o) => info!("Created file: {}", i.1.basename()),
             Err(e) => {
                 error!("Failed to create file: {}", i.1.basename());
+
+                match fs_action::delete(&gen_dir) {
+                    Ok(_) => (),
+                    Err(e) => {
+                        error!("Failed to delete generation directory!");
+                        return Err(e);
+                    },
+                };
+
                 return Err(e);
             },
         };
