@@ -239,12 +239,16 @@ fn app() -> ExitCode {
                 Err(_) => return ExitCode::Fail,
             };
         },
-        cli::Commands::InitConfig => {
-            info!("Creating user configuration...");
+        cli::Commands::Config { command } => {
+            match command {
+                cli::ConfigCommands::Init => {
+                    info!("Creating user configuration...");
 
-            match config::init_user_config() {
-                Ok(_) => success!("Created user configuration successfully!"),
-                Err(_) => return ExitCode::Fail,
+                    match config::init_user_config() {
+                        Ok(_) => success!("Created user configuration successfully!"),
+                        Err(_) => return ExitCode::Fail,
+                    };
+                },
             };
         },
         cli::Commands::API { command } => {

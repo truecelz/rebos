@@ -21,8 +21,11 @@ pub enum Commands {
     },
     /// Run the program setup
     Setup,
-    /// Create a default Rebos configuration
-    InitConfig,
+    /// Configuration commands
+    Config {
+        #[command(subcommand)]
+        command: ConfigCommands,
+    },
     /// API for things like scripting
     API {
         #[command(subcommand)]
@@ -41,6 +44,12 @@ pub enum APICommands {
     EchoGeneric {
         message: String,
     },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum ConfigCommands {
+    /// Create a default Rebos configuration
+    Init,
 }
 
 #[derive(Subcommand, Debug)]

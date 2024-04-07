@@ -25,6 +25,22 @@ trait Migrate<T> {
 
 #[derive(PartialEq, Serialize, Deserialize, Debug)]
 #[serde(deny_unknown_fields, default)]
+pub struct ManagerOrder {
+    pub begin: Vec<String>,
+    pub end: Vec<String>,
+}
+
+impl Default for ManagerOrder {
+    fn default() -> Self {
+        Self {
+            begin: Vec::new(),
+            end: Vec::new(),
+        }
+    }
+}
+
+#[derive(PartialEq, Serialize, Deserialize, Debug)]
+#[serde(deny_unknown_fields, default)]
 pub struct Items {
     pub items: Vec<String>,
 }
@@ -421,6 +437,66 @@ fn load_manager(man: &str) -> Result<Manager, io::Error> {
     Ok(manager)
 }
 
+fn get_order(gen: &Generation) -> Result<Vec<String>, io::Error> {
+    let return_order = {
+        let path = places::base_user().add_str("manager_order.toml");
+
+        if path.exists() {
+            info!("Reading order rules from manager_order.toml...");
+
+            let order_obj: ManagerOrder = match toml::from_str(&file::read(&path)?) {
+                Ok(o) => o,
+                Err(e) => {
+                    error!("Failed to deserialize manager_order.toml!");
+                    error!("TOML Error: {e:#?}");
+
+                    return Err(custom_error("Failed to deserialize manager_order.toml!"));
+                },
+            };
+
+            let mut order: Vec<String> = order_obj.begin.clone();
+
+            for k in gen.managers.keys() {
+                if order_obj.begin.contains(k) || order_obj.end.contains(k) {
+                    continue;
+                }
+
+                order.push(k.to_string());
+            }
+
+            order.extend(order_obj.end);
+
+            let mut dup_track: HashMap<String, usize> = HashMap::new();
+
+            for o in order.iter() {
+                if dup_track.get(o) == None {
+                    dup_track.insert(o.to_string(), 1);
+
+                    continue;
+                }
+
+                *dup_track.get_mut(o).unwrap() += 1;
+            }
+
+            for (key, value) in dup_track.into_iter() {
+                if value == 1 {
+                    continue;
+                }
+
+                warning!("Duplicates in manager_order.toml! (Found {value} of: '{key}')");
+            }
+
+            order
+        }
+
+        else {
+            gen.managers.keys().into_iter().map(|x| x.to_string()).collect()
+        }
+    };
+
+    Ok(return_order)
+}
+
 // Build the 'current' system generation.
 pub fn build() -> Result<(), io::Error> {
     run_hook_and_return_if_err!("pre_build");
@@ -441,8 +517,10 @@ pub fn build() -> Result<(), io::Error> {
 
             let mut summary_entries: HashMap<String, Vec<History>> = HashMap::new();
 
+            let curr_order: Vec<String> = get_order(&curr_gen)?;
+
             // Add new items, remove old items.
-            for i in curr_gen.managers.keys() {
+            for i in curr_order.iter() {
                 let man = load_manager(i)?;
 
                 let curr_items = curr_gen.managers.get(i).unwrap();
@@ -477,8 +555,10 @@ pub fn build() -> Result<(), io::Error> {
                 }
             }
 
+            let built_order: Vec<String> = get_order(&built_gen)?;
+
             // Remove items from managers that were removed from the generation.
-            for i in built_gen.managers.keys() {
+            for i in built_order.iter() {
                 let built_items = built_gen.managers.get(i).unwrap();
 
                 match curr_gen.managers.get(i) {
@@ -512,7 +592,9 @@ pub fn build() -> Result<(), io::Error> {
             println!("");
         },
         Err(_) => {
-            for i in curr_gen.managers.keys() {
+            let curr_order = get_order(&curr_gen)?;
+
+            for i in curr_order.iter() {
                 let curr_items = curr_gen.managers.get(i).unwrap();
 
                 let man = load_manager(i)?;
