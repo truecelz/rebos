@@ -486,7 +486,7 @@ fn get_order(gen: &Generation) -> Result<Vec<String>, io::Error> {
                 warning!("Duplicates in manager_order.toml! (Found {value} of: '{key}')");
             }
 
-            order
+            order.into_iter().filter(|x| gen.managers.contains_key(x)).collect()
         }
 
         else {
