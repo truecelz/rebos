@@ -7,7 +7,7 @@ mod generation; // The generations system.
 mod config; // Configuration stuff.
 mod obj_print; // Print objects.
 mod obj_print_boilerplate; // Boilerplate code for obj print.
-mod package_management; // Stuff related to package management.
+mod management; // Stuff related to item management.
 mod system; // Used for getting system information.
 mod hook; // Hook stuff.
 

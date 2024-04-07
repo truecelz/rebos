@@ -8,7 +8,7 @@ use crate::obj_print_boilerplate::macros::*;
 pub fn generation(gen: &Generation) {
     println!("");
 
-    for i in gen.pkg_managers.keys() {
-        print_entry!(i, gen.pkg_managers.get(i).unwrap().pkgs);
+    for i in gen.managers.keys() {
+        print_entry!(i, gen.managers.get(i).unwrap().items);
     }
 }

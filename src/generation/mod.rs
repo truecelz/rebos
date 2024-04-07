@@ -14,72 +14,148 @@ use crate::hook::run_hook_and_return_if_err;
 use crate::places;
 use crate::library;
 use crate::library::*;
-use crate::package_management::PackageManager;
+use crate::management::Manager;
 use crate::config::{Config, ConfigSide};
 use crate::config::config_for;
 use crate::system;
 
-#[derive(PartialEq, Serialize, Deserialize, Debug)]
-#[serde(deny_unknown_fields, default)]
-pub struct Packages {
-    pub pkgs: Vec<String>,
-}
-
-impl Default for Packages {
-    fn default() -> Self {
-        Self {
-            pkgs: Vec::new(),
-        }
-    }
+trait Migrate<T> {
+    fn migrate(self) -> T;
 }
 
 #[derive(PartialEq, Serialize, Deserialize, Debug)]
 #[serde(deny_unknown_fields, default)]
-pub struct GenerationLegacy {
-    pub imports: Vec<String>,
-    pub pkgs: Vec<String>,
-    pub flatpaks: Vec<String>,
-    pub crates: Vec<String>,
+pub struct Items {
+    pub items: Vec<String>,
 }
 
-impl GenerationLegacy {
-    pub fn migrate(self) -> Generation {
-        let mut gen = Generation::default();
-
-        gen.imports = self.imports;
-
-        gen.pkg_managers.insert("system".to_string(), Packages { pkgs: self.pkgs });
-        gen.pkg_managers.insert("flatpak".to_string(), Packages { pkgs: self.flatpaks });
-        gen.pkg_managers.insert("cargo".to_string(), Packages { pkgs: self.crates });
-
-        gen
-    }
-}
-
-impl Default for GenerationLegacy {
+impl Default for Items {
     fn default() -> Self {
         Self {
-            imports: Vec::new(),
-            pkgs: Vec::new(),
-            flatpaks: Vec::new(),
-            crates: Vec::new(),
+            items: Vec::new(),
         }
     }
 }
 
-// The structure for a generation.
+pub mod legacy_1 {
+    use serde::{ Serialize, Deserialize };
+
+    use super::Migrate;
+
+    #[derive(PartialEq, Serialize, Deserialize, Debug)]
+    #[serde(deny_unknown_fields, default)]
+    pub struct Generation {
+        pub imports: Vec<String>,
+        pub pkgs: Vec<String>,
+        pub flatpaks: Vec<String>,
+        pub crates: Vec<String>,
+    }
+
+    impl Migrate<super::legacy_2::Generation> for Generation {
+        fn migrate(self) -> super::legacy_2::Generation {
+            let mut gen = super::legacy_2::Generation::default();
+    
+            gen.imports = self.imports;
+    
+            gen.pkg_managers.insert("system".to_string(), super::legacy_2::Packages { pkgs: self.pkgs });
+            gen.pkg_managers.insert("flatpak".to_string(), super::legacy_2::Packages { pkgs: self.flatpaks });
+            gen.pkg_managers.insert("cargo".to_string(), super::legacy_2::Packages { pkgs: self.crates });
+    
+            gen
+        }
+    }
+
+    impl Migrate<super::Generation> for Generation {
+        fn migrate(self) -> super::Generation {
+            let mut gen = super::Generation::default();
+    
+            gen.imports = self.imports;
+    
+            gen.managers.insert("system".to_string(), super::Items { items: self.pkgs });
+            gen.managers.insert("flatpak".to_string(), super::Items { items: self.flatpaks });
+            gen.managers.insert("cargo".to_string(), super::Items { items: self.crates });
+    
+            gen
+        }
+    }
+
+    impl Default for Generation {
+        fn default() -> Self {
+            Self {
+                imports: Vec::new(),
+                pkgs: Vec::new(),
+                flatpaks: Vec::new(),
+                crates: Vec::new(),
+            }
+        }
+    }
+}
+
+pub mod legacy_2 {
+    use serde::{ Serialize, Deserialize };
+    use hashbrown::HashMap;
+
+    use super::Migrate;
+
+    #[derive(PartialEq, Serialize, Deserialize, Debug)]
+    #[serde(deny_unknown_fields, default)]
+    pub struct Packages {
+        pub pkgs: Vec<String>,
+    }
+
+    impl Default for Packages {
+        fn default() -> Self {
+            Self {
+                pkgs: Vec::new(),
+            }
+        }
+    }
+
+    #[derive(PartialEq, Serialize, Deserialize, Debug)]
+    #[serde(deny_unknown_fields, default)]
+    pub struct Generation {
+        pub imports: Vec<String>,
+        pub pkg_managers: HashMap<String, Packages>,
+    }
+
+    impl Migrate<super::Generation> for Generation {
+        fn migrate(self) -> super::Generation {
+            let mut gen = super::Generation::default();
+
+            gen.imports = self.imports;
+
+            for (key, value) in self.pkg_managers.into_iter() {
+                gen.managers.insert(key, super::Items {
+                    items: value.pkgs,
+                });
+            }
+
+            gen
+        }
+    }
+
+    impl Default for Generation {
+        fn default() -> Generation {
+            Generation {
+                imports: Vec::new(),
+                pkg_managers: HashMap::new(),
+            }
+        }
+    }
+}
+
 #[derive(PartialEq, Serialize, Deserialize, Debug)]
 #[serde(deny_unknown_fields, default)]
 pub struct Generation {
     pub imports: Vec<String>,
-    pub pkg_managers: HashMap<String, Packages>,
+    pub managers: HashMap<String, Items>,
 }
 
 impl Default for Generation {
     fn default() -> Generation {
         Generation {
             imports: Vec::new(),
-            pkg_managers: HashMap::new(),
+            managers: HashMap::new(),
         }
     }
 }
@@ -88,12 +164,12 @@ impl GenerationUtils for Generation {
     fn extend(&mut self, other_gen: Generation) {
         self.imports.extend(other_gen.imports);
 
-        for i in other_gen.pkg_managers.keys() {
-            match self.pkg_managers.get_mut(i) {
-                Some(s) => s.pkgs.extend(other_gen.pkg_managers.get(i).unwrap().pkgs.clone()),
+        for i in other_gen.managers.keys() {
+            match self.managers.get_mut(i) {
+                Some(s) => s.items.extend(other_gen.managers.get(i).unwrap().items.clone()),
                 None => {
-                    self.pkg_managers.insert(i.to_string(), Packages { pkgs: Vec::new() });
-                    self.pkg_managers.get_mut(i).unwrap().pkgs.extend(other_gen.pkg_managers.get(i).unwrap().pkgs.clone());
+                    self.managers.insert(i.to_string(), Items { items: Vec::new() });
+                    self.managers.get_mut(i).unwrap().items.extend(other_gen.managers.get(i).unwrap().items.clone());
                 },
             };
         }
@@ -101,7 +177,7 @@ impl GenerationUtils for Generation {
 }
 
 pub trait GenerationUtils {
-    // Extend all of the fields from one Generation object to another, another being the caller.
+    /// Extend all of the fields from one Generation object to another, another being the caller
     fn extend(&mut self, other_gen: Generation);
 }
 
@@ -144,6 +220,37 @@ pub fn gen(side: ConfigSide) -> Result<Generation, io::Error> {
     Ok(generation)
 }
 
+macro_rules! deserialize_legacy {
+    ($gen: ident, $string: expr, $gen_type: ty, $version: expr) => {
+        let mut should_try = false;
+
+        match $gen {
+            None => should_try = true,
+            Some(ref s) => {
+                match s {
+                    Err(_) => should_try = true,
+                    _ => (),
+                };
+            },
+        };
+
+        if should_try {
+            match toml::from_str::<$gen_type>($string) {
+                Ok(o) => {
+                    success!("Deserialized generation in legacy mode {}.x.x!", $version);
+
+                    $gen = Some(Ok(o.migrate()));
+                },
+                Err(e) => {
+                    error!("Failed to deserialize generation in legacy mode {}.x.x!", $version);
+
+                    $gen = Some(Err(e));
+                },
+            };
+        }
+    };
+}
+
 // Read a file and return a Generation object.
 fn read_to_gen(path: &Path) -> Result<Generation, io::Error> {
     let gen_string = match file::read(path) {
@@ -157,19 +264,28 @@ fn read_to_gen(path: &Path) -> Result<Generation, io::Error> {
     Ok(match toml::from_str(&gen_string) {
         Ok(o) => o,
         Err(e) => {
-            warning!("Failed to deserialize generation, attempting legacy mode... ('{}')", path.to_string());
+            warning!("Failed to deserialize generation, attempting legacy modes... ('{}')", path.to_string());
 
-            let legacy: GenerationLegacy = match toml::from_str(&gen_string) {
-                Ok(o) => o,
-                Err(_) => {
-                    error!("Failed to deserialize in legacy mode, here is the error for regular mode:");
-                    error!("{e:#?}");
+            let mut gen: Option<Result<Generation, toml::de::Error>> = None;
 
-                    return Err(custom_error("Failed to deserialize generation!"));
+            deserialize_legacy!(gen, &gen_string, legacy_1::Generation, 1);
+            deserialize_legacy!(gen, &gen_string, legacy_2::Generation, 2);
+
+            match gen {
+                Some(s) => {
+                    match s {
+                        Ok(o) => o,
+                        Err(_) => {
+                            error!("Failed to deserialize in legacy modes! Regular deserialization error:");
+                            error!("{e:#?}");
+                            error!("Path: '{}'", path.to_string());
+
+                            return Err(custom_error("Failed to deserialize generation!"));
+                        },
+                    }
                 },
-            };
-
-            legacy.migrate()
+                None => unreachable!(),
+            }
         },
     })
 }
@@ -279,30 +395,30 @@ pub fn commit(msg: &str) -> Result<(), io::Error> {
     return Ok(());
 }
 
-fn load_package_manager(man: &str) -> Result<PackageManager, io::Error> {
-    let path = places::base_user().add_str(&format!("pkg_managers/{man}.toml"));
+fn load_manager(man: &str) -> Result<Manager, io::Error> {
+    let path = places::base_user().add_str(&format!("managers/{man}.toml"));
 
     let man_string = match file::read(&path) {
         Ok(o) => o,
         Err(e) => {
-            piglog::fatal!("Failed to read package manager file! ({man})");
+            piglog::fatal!("Failed to read manager file! ({man})");
             piglog::note!("If this error shows up, it is possible the file is missing. ({})", path.to_string());
 
             return Err(e);
         },
     };
 
-    let package_manager: PackageManager = match toml::from_str(&man_string) {
+    let manager: Manager = match toml::from_str(&man_string) {
         Ok(o) => o,
         Err(e) => {
-            piglog::fatal!("Failed to deserialize package manager! ({man})");
+            piglog::fatal!("Failed to deserialize manager! ({man})");
             piglog::fatal!("Error: {e:#?}");
 
-            return Err(io::Error::new(io::ErrorKind::Other, "Failed to deserialize package manager!"));
+            return Err(io::Error::new(io::ErrorKind::Other, "Failed to deserialize manager!"));
         },
     };
 
-    Ok(package_manager)
+    Ok(manager)
 }
 
 // Build the 'current' system generation.
@@ -325,15 +441,15 @@ pub fn build() -> Result<(), io::Error> {
 
             let mut summary_entries: HashMap<String, Vec<History>> = HashMap::new();
 
-            // Add new packages, remove old packages.
-            for i in curr_gen.pkg_managers.keys() {
-                let pkg_man = load_package_manager(i)?;
+            // Add new items, remove old items.
+            for i in curr_gen.managers.keys() {
+                let man = load_manager(i)?;
 
-                let curr_pkgs = curr_gen.pkg_managers.get(i).unwrap();
+                let curr_items = curr_gen.managers.get(i).unwrap();
 
-                match built_gen.pkg_managers.get(i) {
-                    Some(built_pkgs) => {
-                        let diffs = history(&built_pkgs.pkgs, &curr_pkgs.pkgs);
+                match built_gen.managers.get(i) {
+                    Some(built_items) => {
+                        let diffs = history(&built_items.items, &curr_items.items);
 
                         let mut to_install: Vec<String> = Vec::new();
                         let mut to_remove: Vec<String> = Vec::new();
@@ -345,15 +461,15 @@ pub fn build() -> Result<(), io::Error> {
                             };
                         }
 
-                        pkg_man.install(&to_install)?;
-                        pkg_man.remove(&to_remove)?;
+                        man.add(&to_install)?;
+                        man.remove(&to_remove)?;
 
                         summary_entries.insert(i.to_string(), diffs);
                     },
                     None => {
-                        pkg_man.install(&curr_pkgs.pkgs)?;
+                        man.add(&curr_items.items)?;
 
-                        summary_entries.insert(i.to_string(), curr_pkgs.pkgs.iter().map(|x| History {
+                        summary_entries.insert(i.to_string(), curr_items.items.iter().map(|x| History {
                             mode: HistoryMode::Add,
                             line: x.to_string(),
                         }).collect());
@@ -361,18 +477,18 @@ pub fn build() -> Result<(), io::Error> {
                 }
             }
 
-            // Remove packages from package managers that were removed from the generation.
-            for i in built_gen.pkg_managers.keys() {
-                let built_pkgs = built_gen.pkg_managers.get(i).unwrap();
+            // Remove items from managers that were removed from the generation.
+            for i in built_gen.managers.keys() {
+                let built_items = built_gen.managers.get(i).unwrap();
 
-                match curr_gen.pkg_managers.get(i) {
+                match curr_gen.managers.get(i) {
                     Some(_) => (),
                     None => {
-                        let pkg_man = load_package_manager(i)?;
+                        let man = load_manager(i)?;
 
-                        pkg_man.remove(&built_pkgs.pkgs)?;
+                        man.remove(&built_items.items)?;
 
-                        summary_entries.insert(i.to_string(), built_pkgs.pkgs.iter().map(|x| History {
+                        summary_entries.insert(i.to_string(), built_items.items.iter().map(|x| History {
                             mode: HistoryMode::Remove,
                             line: x.to_string(),
                         }).collect());
@@ -396,15 +512,15 @@ pub fn build() -> Result<(), io::Error> {
             println!("");
         },
         Err(_) => {
-            for i in curr_gen.pkg_managers.keys() {
-                let curr_pkgs = curr_gen.pkg_managers.get(i).unwrap();
+            for i in curr_gen.managers.keys() {
+                let curr_items = curr_gen.managers.get(i).unwrap();
 
-                let pkg_man = load_package_manager(i)?;
+                let man = load_manager(i)?;
 
-                pkg_man.install(&curr_pkgs.pkgs)?;
+                man.add(&curr_items.items)?;
             }
 
-            note!("Since this is your first time building a generation, there is no summary.");
+            note!("There is no summary. (First time building.)");
         },
     };
 

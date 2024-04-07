@@ -106,24 +106,24 @@ pub fn remove_array_duplicates<T: Clone + PartialEq>(dup_vec: &[T]) -> Vec<T> {
 pub fn history_gen(gen_1: &Generation, gen_2: &Generation) -> HashMap<String, Vec<History>> {
     let mut history_map: HashMap<String, Vec<History>> = HashMap::new();
 
-    for i in gen_2.pkg_managers.keys() {
-        let pkgs_2 = gen_2.pkg_managers.get(i).unwrap();
+    for i in gen_2.managers.keys() {
+        let items_2 = gen_2.managers.get(i).unwrap();
 
-        match gen_1.pkg_managers.get(i) {
-            Some(pkgs_1) => history_map.insert(i.to_string(), history(&pkgs_1.pkgs, &pkgs_2.pkgs)),
-            None => history_map.insert(i.to_string(), pkgs_2.pkgs.iter().map(|x| History {
+        match gen_1.managers.get(i) {
+            Some(items_1) => history_map.insert(i.to_string(), history(&items_1.items, &items_2.items)),
+            None => history_map.insert(i.to_string(), items_2.items.iter().map(|x| History {
                 mode: HistoryMode::Add,
                 line: x.to_string(),
             }).collect()),
         };
     }
 
-    for i in gen_1.pkg_managers.keys() {
-        let pkgs_1 = gen_1.pkg_managers.get(i).unwrap();
+    for i in gen_1.managers.keys() {
+        let items_1 = gen_1.managers.get(i).unwrap();
 
-        match gen_2.pkg_managers.get(i) {
+        match gen_2.managers.get(i) {
             Some(_) => (),
-            None => { history_map.insert(i.to_string(), pkgs_1.pkgs.iter().map(|x| History {
+            None => { history_map.insert(i.to_string(), items_1.items.iter().map(|x| History {
                 mode: HistoryMode::Remove,
                 line: x.to_string(),
             }).collect()); },

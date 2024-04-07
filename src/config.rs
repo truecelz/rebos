@@ -23,33 +23,36 @@ imports = [
 ]
 
 # Packages to be installed via the native package manager.
-pkg_managers.system.pkgs = [
+[managers.system]
+items = [
     # \"git\",
 ]
 
 # Packages to be installed via Flatpak.
-pkg_managers.flatpak.pkgs = [
+[managers.flatpak]
+items = [
     # \"com.github.tchx84.Flatseal\",
 ]
 
 # Packages to be installed via Cargo.
-pkg_managers.cargo.pkgs = [
+[managers.cargo]
+items = [
     # \"bacon\",
 ]
 ";
 
 const DEFAULT_PACKAGE_MANAGER_CONFIG: &str =
-"# ----------------------------------- #
-#    Package Manager Configuration    #
-# ----------------------------------- #
+"# --------------------------- #
+#    Manager Configuration    #
+# --------------------------- #
 
 # Make sure to enter the exact command you use as the normal user!
 # That means including 'sudo' or 'doas' or whatever if the command needs it.
-# Where you would put packages, enter '#:?'.
+# Where you would put items, enter '#:?'.
 
-# Example: install = \"sudo apt install #:?\"
+# Example: add = \"sudo apt install #:?\"
 
-install = \"\" # Example: sudo apt install #:?
+add = \"\" # Example: sudo apt install #:?
 remove = \"\" # Example: sudo apt remove #:?
 sync = \"\" # Example: sudo apt update
 upgrade = \"\" # Example: sudo apt upgrade
@@ -60,32 +63,35 @@ plural_name = \"system packages\"
 #    Additional configuration.    #
 # ------------------------------- #
 
-# many_pkg_args = BOOL: Can you supply many packages as an argument? Example: 'sudo apt install git vim wget'
+# many_args = BOOL: Can you supply many items as an argument? Example: 'sudo apt install git vim wget'
 
-config = { many_pkg_args = true }
+[config]
+many_args = true
 ";
 
 const DEFAULT_FLATPAK_MANAGER_CONFIG: &str =
 "# Flatpak
 
-install = \"flatpak install #:?\"
+add = \"flatpak install #:?\"
 remove = \"flatpak uninstall #:?\"
 upgrade = \"flatpak upgrade\"
 
 plural_name = \"flatpaks\"
 
-config = { many_pkg_args = true }
+[config]
+many_args = true
 ";
 
 const DEFAULT_CARGO_MANAGER_CONFIG: &str =
 "# Cargo
 
-install = \"cargo install #:?\"
+add = \"cargo install #:?\"
 remove = \"cargo uninstall #:?\"
 
 plural_name = \"crates\"
 
-config = { many_pkg_args = true }
+[config]
+many_args = true
 ";
 
 // This determinds if a function should
@@ -114,7 +120,7 @@ pub fn init_user_config() -> Result<(), io::Error> {
         places::base_user().add_str("machines").add_str(&system_hostname),
         places::base_user().add_str("imports"),
         places::base_user().add_str("hooks"),
-        places::base_user().add_str("pkg_managers"),
+        places::base_user().add_str("managers"),
     ];
 
     for i in directories.iter() {
@@ -132,9 +138,9 @@ pub fn init_user_config() -> Result<(), io::Error> {
     let files = vec![
         (DEFAULT_USER_GEN, config::config_for(Config::Generation, ConfigSide::User)),
         (DEFAULT_USER_GEN, places::base_user().add_str("machines").add_str(&system_hostname).add_str("gen.toml")),
-        (DEFAULT_PACKAGE_MANAGER_CONFIG, places::base_user().add_str("pkg_managers/system.toml")),
-        (DEFAULT_FLATPAK_MANAGER_CONFIG, places::base_user().add_str("pkg_managers/flatpak.toml")),
-        (DEFAULT_CARGO_MANAGER_CONFIG, places::base_user().add_str("pkg_managers/cargo.toml")),
+        (DEFAULT_PACKAGE_MANAGER_CONFIG, places::base_user().add_str("managers/system.toml")),
+        (DEFAULT_FLATPAK_MANAGER_CONFIG, places::base_user().add_str("managers/flatpak.toml")),
+        (DEFAULT_CARGO_MANAGER_CONFIG, places::base_user().add_str("managers/cargo.toml")),
     ];
 
     for i in files.iter() {
