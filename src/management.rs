@@ -4,8 +4,10 @@ use std::io;
 use serde::Deserialize;
 use piglog::prelude::*;
 use piglog::*;
+use fspp::*;
 
 use crate::library::{ self, * };
+use crate::places;
 
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields, default)]
@@ -111,9 +113,9 @@ impl Manager {
         crate::hook::run_hook_and_return_if_err!(format!("pre_{}_sync", self.plural_name));
 
         match run_command(self.sync.as_str()) {
-            true => info!("Successfully installed repositories!"),
+            true => info!("Synced manager successfully! ('{}')", self.plural_name),
             false => {
-                error!("Failed to sync repositories!");
+                error!("Failed to sync manager! ('{}')", self.plural_name);
 
                 return Err(custom_error("Failed to sync repositories!"));
             },
@@ -157,4 +159,79 @@ impl Default for Manager {
             plural_name: String::from("ITEMS FROM UNKNOWN MANAGER"),
         }
     }
+}
+
+pub fn load_manager(man: &str) -> Result<Manager, io::Error> {
+    let path = places::base_user().add_str(&format!("managers/{man}.toml"));
+
+    let man_string = match file::read(&path) {
+        Ok(o) => o,
+        Err(e) => {
+            piglog::fatal!("Failed to read manager file! ({man})");
+            piglog::note!("If this error shows up, it is possible the file is missing. ({})", path.to_string());
+
+            return Err(e);
+        },
+    };
+
+    let manager: Manager = match toml::from_str(&man_string) {
+        Ok(o) => o,
+        Err(e) => {
+            piglog::fatal!("Failed to deserialize manager! ({man})");
+            piglog::fatal!("Error: {e:#?}");
+
+            return Err(io::Error::new(io::ErrorKind::Other, "Failed to deserialize manager!"));
+        },
+    };
+
+    Ok(manager)
+}
+
+pub fn managers() -> Result<Vec<String>, io::Error> {
+    let path = places::base_user().add_str("managers");
+
+    let man_list: Vec<String> = directory::list_items(&path)?
+        .into_iter()
+        .map(|x| x.basename().replace(".toml", ""))
+        .collect();
+
+    Ok(man_list)
+}
+
+pub fn sync_all() -> Result<(), io::Error> {
+    let m_all = managers()?;
+    let m_len = m_all.len();
+
+    info!("Syncing {} managers...", m_len);
+
+    for m in m_all {
+        let man = load_manager(&m)?;
+
+        man.sync()?;
+    }
+
+    success!("All {} managers synced successfully!", m_len);
+
+    Ok(())
+}
+
+pub fn upgrade_all(sync_before_upgrade: bool) -> Result<(), io::Error> {
+    if sync_before_upgrade {
+        sync_all()?;
+    }
+
+    let m_all = managers()?;
+    let m_len = m_all.len();
+
+    info!("Upgrading {} managers...", m_len);
+
+    for m in m_all {
+        let man = load_manager(&m)?;
+
+        man.upgrade()?;
+    }
+
+    success!("All {} managers upgraded successfully!", m_len);
+
+    Ok(())
 }

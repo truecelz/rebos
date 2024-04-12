@@ -14,7 +14,7 @@ use crate::hook::run_hook_and_return_if_err;
 use crate::places;
 use crate::library;
 use crate::library::*;
-use crate::management::Manager;
+use crate::management::load_manager;
 use crate::config::{Config, ConfigSide};
 use crate::config::config_for;
 use crate::system;
@@ -409,32 +409,6 @@ pub fn commit(msg: &str) -> Result<(), io::Error> {
     };
 
     return Ok(());
-}
-
-fn load_manager(man: &str) -> Result<Manager, io::Error> {
-    let path = places::base_user().add_str(&format!("managers/{man}.toml"));
-
-    let man_string = match file::read(&path) {
-        Ok(o) => o,
-        Err(e) => {
-            piglog::fatal!("Failed to read manager file! ({man})");
-            piglog::note!("If this error shows up, it is possible the file is missing. ({})", path.to_string());
-
-            return Err(e);
-        },
-    };
-
-    let manager: Manager = match toml::from_str(&man_string) {
-        Ok(o) => o,
-        Err(e) => {
-            piglog::fatal!("Failed to deserialize manager! ({man})");
-            piglog::fatal!("Error: {e:#?}");
-
-            return Err(io::Error::new(io::ErrorKind::Other, "Failed to deserialize manager!"));
-        },
-    };
-
-    Ok(manager)
 }
 
 fn get_order(gen: &Generation) -> Result<Vec<String>, io::Error> {

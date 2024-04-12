@@ -26,6 +26,11 @@ pub enum Commands {
         #[command(subcommand)]
         command: ConfigCommands,
     },
+    /// Manager commands
+    Managers {
+        #[command(subcommand)]
+        command: ManagerCommands,
+    },
     /// API for things like scripting
     API {
         #[command(subcommand)]
@@ -43,6 +48,18 @@ pub enum APICommands {
     /// Use the Rebos log message system (Generic)
     EchoGeneric {
         message: String,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum ManagerCommands {
+    /// Sync all managers
+    Sync,
+    /// Upgrade all managers
+    Upgrade {
+        #[clap(long)]
+        /// Sync before upgrading
+        sync: bool,
     },
 }
 

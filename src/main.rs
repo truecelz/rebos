@@ -251,6 +251,22 @@ fn app() -> ExitCode {
                 },
             };
         },
+        cli::Commands::Managers { command } => {
+            match command {
+                cli::ManagerCommands::Sync => {
+                    match management::sync_all() {
+                        Ok(_) => (),
+                        Err(_) => return ExitCode::Fail,
+                    };
+                },
+                cli::ManagerCommands::Upgrade { sync } => {
+                    match management::upgrade_all(*sync) {
+                        Ok(_) => (),
+                        Err(_) => return ExitCode::Fail,
+                    };
+                },
+            };
+        },
         cli::Commands::API { command } => {
             match command {
                 cli::APICommands::Echo { log_mode, message } => {
