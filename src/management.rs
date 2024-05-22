@@ -5,6 +5,7 @@ use serde::Deserialize;
 use piglog::prelude::*;
 use piglog::*;
 use fspp::*;
+use colored::Colorize;
 
 use crate::library::{ self, * };
 use crate::places;
@@ -24,13 +25,14 @@ impl Default for ManagerConfig {
 }
 
 #[derive(Deserialize, Debug)]
-#[serde(deny_unknown_fields, default)]
+#[serde(deny_unknown_fields)]
 pub struct Manager {
     pub add: String,
     pub remove: String,
-    pub sync: String,
-    pub upgrade: String,
+    pub sync: Option<String>,
+    pub upgrade: Option<String>,
     pub config: ManagerConfig,
+    pub hook_name: String,
     pub plural_name: String,
 }
 
@@ -38,7 +40,7 @@ impl Manager {
     pub fn add(&self, items: &[String]) -> Result<(), io::Error> {
         let many = self.config.many_args;
 
-        crate::hook::run_hook_and_return_if_err!(format!("pre_{}_add", self.plural_name));
+        crate::hook::run_hook_and_return_if_err!(format!("pre_{}_add", self.hook_name));
 
         if many {
             self.add_raw(&items.join(" "))?;
@@ -50,7 +52,7 @@ impl Manager {
             }
         }
 
-        crate::hook::run_hook_and_return_if_err!(format!("post_{}_add", self.plural_name));
+        crate::hook::run_hook_and_return_if_err!(format!("post_{}_add", self.hook_name));
 
         Ok(())
     }
@@ -58,7 +60,7 @@ impl Manager {
     pub fn remove(&self, items: &[String]) -> Result<(), io::Error> {
         let many = self.config.many_args;
 
-        crate::hook::run_hook_and_return_if_err!(format!("pre_{}_remove", self.plural_name));
+        crate::hook::run_hook_and_return_if_err!(format!("pre_{}_remove", self.hook_name));
 
         if many {
             self.remove_raw(&items.join(" "))?;
@@ -70,7 +72,7 @@ impl Manager {
             }
         }
 
-        crate::hook::run_hook_and_return_if_err!(format!("post_{}_remove", self.plural_name));
+        crate::hook::run_hook_and_return_if_err!(format!("post_{}_remove", self.hook_name));
 
         Ok(())
     }
@@ -110,35 +112,39 @@ impl Manager {
     }
 
     pub fn sync(&self) -> Result<(), io::Error> {
-        crate::hook::run_hook_and_return_if_err!(format!("pre_{}_sync", self.plural_name));
+        crate::hook::run_hook_and_return_if_err!(format!("pre_{}_sync", self.hook_name));
 
-        match run_command(self.sync.as_str()) {
-            true => info!("Synced manager successfully! ('{}')", self.plural_name),
-            false => {
-                error!("Failed to sync manager! ('{}')", self.plural_name);
+        if let Some(ref s) = self.sync {
+            match run_command(s) {
+                true => info!("Synced manager successfully! ('{}')", self.plural_name),
+                false => {
+                    error!("Failed to sync manager! ('{}')", self.plural_name);
 
-                return Err(custom_error("Failed to sync repositories!"));
-            },
-        };
+                    return Err(custom_error("Failed to sync repositories!"));
+                },
+            };
+        }
 
-        crate::hook::run_hook_and_return_if_err!(format!("post_{}_sync", self.plural_name));
+        crate::hook::run_hook_and_return_if_err!(format!("post_{}_sync", self.hook_name));
 
         Ok(())
     }
 
     pub fn upgrade(&self) -> Result<(), io::Error> {
-        crate::hook::run_hook_and_return_if_err!(format!("pre_{}_upgrade", self.plural_name));
+        crate::hook::run_hook_and_return_if_err!(format!("pre_{}_upgrade", self.hook_name));
 
-        match run_command(self.upgrade.as_str()) {
-            true => info!("Successfully upgraded {}!", self.plural_name),
-            false => {
-                error!("Failed to upgrade {}!", self.plural_name);
+        if let Some(ref s) = self.upgrade {
+            match run_command(s) {
+                true => info!("Successfully upgraded {}!", self.plural_name),
+                false => {
+                    error!("Failed to upgrade {}!", self.plural_name);
 
-                return Err(custom_error(format!("Failed to upgrade {}!", self.plural_name).as_str()));
-            },
-        };
+                    return Err(custom_error(format!("Failed to upgrade {}!", self.plural_name).as_str()));
+                },
+            };
+        }
 
-        crate::hook::run_hook_and_return_if_err!(format!("post_{}_upgrade", self.plural_name));
+        crate::hook::run_hook_and_return_if_err!(format!("post_{}_upgrade", self.hook_name));
 
         Ok(())
     }
@@ -146,18 +152,21 @@ impl Manager {
     pub fn set_plural_name(&mut self, pn: &str) {
         self.plural_name = pn.to_string();
     }
-}
 
-impl Default for Manager {
-    fn default() -> Self {
-        Self {
-            add: String::new(),
-            remove: String::new(),
-            sync: String::new(),
-            upgrade: String::new(),
-            config: ManagerConfig::default(),
-            plural_name: String::from("ITEMS FROM UNKNOWN MANAGER"),
+    pub fn check_config(&self) -> Result<(), Vec<String>> {
+        let mut errors: Vec<String> = Vec::new();
+
+        let valid_hook_name = fspp::filename_safe_string(&self.hook_name);
+
+        if self.hook_name != valid_hook_name {
+            errors.push(format!("Field 'hook_name' must be filename safe! (Fixed version: {})", valid_hook_name));
         }
+
+        if errors.len() > 0 {
+            return Err(errors);
+        }
+
+        Ok(())
     }
 }
 
@@ -181,6 +190,19 @@ pub fn load_manager(man: &str) -> Result<Manager, io::Error> {
             piglog::fatal!("Error: {e:#?}");
 
             return Err(io::Error::new(io::ErrorKind::Other, "Failed to deserialize manager!"));
+        },
+    };
+
+    match manager.check_config() {
+        Ok(_) => (),
+        Err(e) => {
+            piglog::fatal!("Manager '{man}' is not configured properly! Errors:");
+
+            for (i, error) in e.into_iter().enumerate() {
+                eprintln!("{}{} {}", i.to_string().bright_red().bold(), ":".bright_black().bold(), error);
+            }
+
+            return Err(io::Error::new(io::ErrorKind::Other, "Failed manager configuration check!"));
         },
     };
 
