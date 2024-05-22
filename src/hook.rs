@@ -4,9 +4,9 @@ macro_rules! run_hook_and_return_if_err {
     (
         $hook_name: expr
     ) => {
-        let macro_hook_path = crate::places::base_user().add_str("hooks").add_str(&format!("{}", $hook_name).replace(" ", "_"));
+        let macro_hook_path = crate::places::base_user().add_str("hooks").add_str(&format!("{}", $hook_name));
 
-        let hook_name = format!("{}", $hook_name).replace(" ", "_");
+        let hook_name = format!("{}", $hook_name);
 
         if macro_hook_path.exists() {
             crate::info!("Running hook: {}", hook_name);

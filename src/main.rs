@@ -249,6 +249,21 @@ fn app() -> ExitCode {
                         Err(_) => return ExitCode::Fail,
                     };
                 },
+                cli::ConfigCommands::Check => {
+                    let result = match config::check_config() {
+                        Ok(o) => o,
+                        Err(_) => return ExitCode::Fail,
+                    };
+
+                    match result {
+                        Ok(misc_info) => config::print_misc_info(&misc_info),
+                        Err((e, misc_info)) => {
+                            config::print_errors_and_misc_info(&e, &misc_info);
+
+                            return ExitCode::Fail;
+                        },
+                    };
+                },
             };
         },
         cli::Commands::Managers { command } => {

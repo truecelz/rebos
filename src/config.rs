@@ -59,6 +59,8 @@ upgrade = \"\" # Example: sudo apt upgrade
 
 plural_name = \"system packages\"
 
+hook_name = \"system_packages\" # This is used in hooks. (Example: post_system_packages_add)
+
 # ------------------------------- #
 #    Additional configuration.    #
 # ------------------------------- #
@@ -78,6 +80,8 @@ upgrade = \"flatpak upgrade\"
 
 plural_name = \"flatpaks\"
 
+hook_name = \"flatpaks\"
+
 [config]
 many_args = true
 ";
@@ -89,6 +93,8 @@ add = \"cargo install #:?\"
 remove = \"cargo uninstall #:?\"
 
 plural_name = \"crates\"
+
+hook_name = \"crates\"
 
 [config]
 many_args = true
@@ -173,4 +179,156 @@ pub fn config_for(config: Config, side: ConfigSide) -> Path {
             },
         },
     };
+}
+
+pub trait ConfigInfoToMessage {
+    fn msg(&self) -> String;
+}
+
+pub enum ConfigError {
+    InvalidManager(String, Vec<String>),
+    MissingMachine,
+}
+
+impl ConfigInfoToMessage for ConfigError {
+    fn msg(&self) -> String {
+        match *self {
+            Self::InvalidManager(ref man, ref errors) => {
+                let mut message = format!("Manager '{man}' is not configured properly! Errors:");
+
+                for i in errors {
+                    message.push('\n');
+                    message.push_str(&format!("  {}", i));
+                }
+
+                message
+            },
+            Self::MissingMachine => format!("Missing configuration for machine! (Machine specific gen.toml...)"),
+        }
+    }
+}
+
+pub enum ConfigWarning {
+    UnusedHook(String),
+}
+
+impl ConfigInfoToMessage for ConfigWarning {
+    fn msg(&self) -> String {
+        match *self {
+            Self::UnusedHook(ref hook) => format!("Hook '{hook}' is never used. (Doesn't match any manager 'hook_name' fields.)"),
+        }
+    }
+}
+
+pub struct ConfigCheckMiscInfo {
+    pub warnings: Vec<ConfigWarning>,
+}
+
+// Validate user configuration.
+pub fn check_config() -> Result<Result<ConfigCheckMiscInfo, (Vec<ConfigError>, ConfigCheckMiscInfo)>, io::Error> {
+    let mut errors: Vec<ConfigError> = Vec::new();
+    let mut warnings: Vec<ConfigWarning> = Vec::new();
+
+    let managers = match crate::management::managers() {
+        Ok(o) => o,
+        Err(e) => {
+            piglog::fatal!("Failed to get a list of managers due to IO error: {}", e);
+
+            return Err(e);
+        },
+    };
+
+    let managers_loaded = {
+        let mut ml: Vec<crate::management::Manager> = Vec::new();
+
+        for i in managers.iter() {
+            ml.push(match crate::management::load_manager_no_config_check(i) {
+                Ok(o) => o,
+                Err(e) => {
+                    piglog::fatal!("Failed to load manager '{}' due to IO error: {}", i, e);
+
+                    return Err(e);
+                },
+            });
+        }
+
+        ml
+    };
+
+    let hostname = system::hostname()?;
+
+    // Check: Manager configuration.
+    for man in managers.iter() {
+        match crate::management::load_manager_no_config_check(man) {
+            Ok(o) => {
+                match o.check_config() {
+                    Ok(_) => (),
+                    Err(e) => errors.push(ConfigError::InvalidManager(man.to_string(), e)),
+                };
+            },
+            Err(e) => {
+                piglog::fatal!("Failed to load manager '{}' due to IO error: {}", man, e);
+
+                return Err(e);
+            },
+        };
+    }
+
+    // Check: Missing machine config.
+    if places::base_user().add_str(&format!("machines/{}", hostname)).add_str("gen.toml").exists() == false {
+        errors.push(ConfigError::MissingMachine);
+    }
+
+    // Check: Unused hooks.
+    let stages_pre: [&str; 2] = ["pre", "post"];
+    let stages_suf: [&str; 4] = ["add", "remove", "sync", "upgrade"];
+    let mut used_hooks: Vec<String> = Vec::new(); // A list of hook names that would be valid/used.
+    used_hooks.push(String::from("pre_build"));
+    used_hooks.push(String::from("post_build"));
+    for man in managers_loaded {
+        for pre in stages_pre {
+            for suf in stages_suf {
+                let hook_name = format!("{}_{}_{}", pre, man.hook_name, suf);
+
+                used_hooks.push(hook_name);
+            }
+        }
+    }
+    for h in directory::list_items(&places::base_user().add_str("hooks"))? {
+        let hook_name = h.basename();
+
+        if used_hooks.contains(&hook_name) == false {
+            warnings.push(ConfigWarning::UnusedHook(hook_name));
+        }
+    }
+
+    let warnings_len = warnings.len();
+
+    let misc_info = ConfigCheckMiscInfo {
+        warnings,
+    };
+
+    if errors.len() > 0 {
+        return Ok(Err((errors, misc_info)));
+    }
+
+    if warnings_len == 0 {
+        piglog::success!("Configuration has no errors or warnings! (^-^)");
+    }
+
+    Ok(Ok(misc_info))
+}
+
+pub fn print_misc_info(misc_info: &ConfigCheckMiscInfo) {
+    for w in misc_info.warnings.iter() {
+        piglog::warning!("{}", w.msg());
+    }
+}
+
+pub fn print_errors_and_misc_info(errors: &[ConfigError], misc_info: &ConfigCheckMiscInfo) {
+    print_misc_info(misc_info);
+
+    for e in errors {
+        piglog::error!("{}", e.msg());
+    }
 }

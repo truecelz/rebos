@@ -67,6 +67,8 @@ pub enum ManagerCommands {
 pub enum ConfigCommands {
     /// Create a default Rebos configuration
     Init,
+    /// Check for warnings and errors in the Rebos configuration
+    Check,
 }
 
 #[derive(Subcommand, Debug)]

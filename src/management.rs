@@ -170,7 +170,7 @@ impl Manager {
     }
 }
 
-pub fn load_manager(man: &str) -> Result<Manager, io::Error> {
+pub fn load_manager_no_config_check(man: &str) -> Result<Manager, io::Error> {
     let path = places::base_user().add_str(&format!("managers/{man}.toml"));
 
     let man_string = match file::read(&path) {
@@ -192,6 +192,12 @@ pub fn load_manager(man: &str) -> Result<Manager, io::Error> {
             return Err(io::Error::new(io::ErrorKind::Other, "Failed to deserialize manager!"));
         },
     };
+
+    Ok(manager)
+}
+
+pub fn load_manager(man: &str) -> Result<Manager, io::Error> {
+    let manager = load_manager_no_config_check(man)?;
 
     match manager.check_config() {
         Ok(_) => (),
