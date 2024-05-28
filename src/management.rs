@@ -14,12 +14,14 @@ use crate::places;
 #[serde(deny_unknown_fields, default)]
 pub struct ManagerConfig {
     pub many_args: bool,
+    pub arg_sep: String,
 }
 
 impl Default for ManagerConfig {
     fn default() -> Self {
         Self {
             many_args: true,
+            arg_sep: String::from(" "),
         }
     }
 }
@@ -37,13 +39,17 @@ pub struct Manager {
 }
 
 impl Manager {
+    fn join_args(&self, items: &[String]) -> String {
+        items.join(&self.config.arg_sep)
+    }
+
     pub fn add(&self, items: &[String]) -> Result<(), io::Error> {
         let many = self.config.many_args;
 
         crate::hook::run_hook_and_return_if_err!(format!("pre_{}_add", self.hook_name));
 
         if many {
-            self.add_raw(&items.join(" "))?;
+            self.add_raw(&self.join_args(items))?;
         }
 
         else {
@@ -63,7 +69,7 @@ impl Manager {
         crate::hook::run_hook_and_return_if_err!(format!("pre_{}_remove", self.hook_name));
 
         if many {
-            self.remove_raw(&items.join(" "))?;
+            self.remove_raw(&self.join_args(items))?;
         }
 
         else {
