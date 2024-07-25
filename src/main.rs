@@ -10,10 +10,12 @@ mod obj_print_boilerplate; // Boilerplate code for obj print.
 mod management; // Stuff related to item management.
 mod system; // Used for getting system information.
 mod hook; // Hook stuff.
+mod lock; // Locking file functionality.
+mod proc; // Process management stuff for Rebos.
 
 // Import stuff from source files and crates.
 use clap::Parser;
-use std::io;
+use std::io::{ self, Write };
 use library::*;
 use config::ConfigSide;
 use colored::Colorize;
@@ -42,6 +44,9 @@ fn main() -> std::process::ExitCode {
 
 // The "main" function.
 fn app() -> ExitCode {
+    // Rebos uses unique Rebos process IDs to prevent locking itself when locking other processes.
+    proc::init_proc_id();
+
     test_code(); // This function is for nothing but testing code whilst developing!
 
     match is_root_user() {
@@ -98,6 +103,11 @@ fn app() -> ExitCode {
     #[allow(unreachable_patterns)]
     match &args.command {
         cli::Commands::Gen { command } => {
+            match lock::lock_on() {
+                Ok(_) => (),
+                Err(_) => return ExitCode::Fail,
+            };
+
             match command {
                 cli::GenCommands::Commit(c) => {
                     info!("Committing user generation...");
@@ -230,6 +240,11 @@ fn app() -> ExitCode {
                     return ExitCode::Fail;
                 },
             };
+
+            match lock::lock_off() {
+                Ok(_) => (),
+                Err(_) => return ExitCode::Fail,
+            };
         },
         cli::Commands::Setup => {
             info!("Beginning setup...");
@@ -266,6 +281,54 @@ fn app() -> ExitCode {
                 },
             };
         },
+        cli::Commands::ForceUnlock => {
+            if lock::is_lock_on() {
+                piglog::warning!("Force unlocking could harm the system if done with the wrong reason!");
+                piglog::warning!("You should only force unlock if you know that you ABSOLUTELY need to!");
+                piglog::warning!(
+                    "{} {} {}",
+                    "Really the ONLY time you should do this is if there is only",
+                    "one Rebos process running, but the locking file was never",
+                    "cleaned up, so Rebos thinks there is another Rebos process!",
+                );
+
+                if bool_question("Are you REALLY sure you want to do this?", false) {
+                    piglog::warning!(
+                        "Force unlocking... use {} to cancel...",
+                        "CTRL + C".bright_red().bold(),
+                    );
+
+                    let countdown_from: u8 = 5;
+
+                    print!("Countdown: ");
+                    for i in 0..countdown_from {
+                        print!("{} ", format!("{}", countdown_from - i).bright_red().bold());
+                        io::stdout().flush().unwrap();
+                        std::thread::sleep(std::time::Duration::from_secs(1));
+                    }
+                    print!("\n");
+
+                    match lock::lock_off() {
+                        Ok(_) => piglog::success!("Unlocked Rebos!"),
+                        Err(e) => {
+                            piglog::fatal!("Failed to unlock: {e}");
+
+                            return ExitCode::Fail;
+                        },
+                    };
+                }
+
+                else {
+                    piglog::info!("Aborting...");
+
+                    return ExitCode::Fail;
+                }
+            }
+
+            else {
+                piglog::info!("Not locked... skipping...");
+            }
+        },
         cli::Commands::Managers { command } => {
             match command {
                 cli::ManagerCommands::Sync => {
@@ -290,6 +353,12 @@ fn app() -> ExitCode {
                 cli::APICommands::EchoGeneric { message } => {
                     piglog::log_generic_print(message.to_string());
                 },
+                cli::APICommands::BoolQuestion { question, fallback } => {
+                    match bool_question(question, fallback.bool()) {
+                        true => return ExitCode::Success,
+                        false => return ExitCode::Fail,
+                    }
+                },
             };
         },
         _ => {
@@ -309,4 +378,44 @@ fn setup() -> Result<(), io::Error> {
     };
 
     return Ok(());
+}
+
+// Ask for a yes or no input.
+pub fn bool_question<S: AsRef<str>>(question: S, fallback: bool) -> bool {
+    let question = question.as_ref();
+
+    let (yes, no) = match fallback {
+        true => ("Y".bright_green().bold().underline(), "n".bright_red()),
+        false => ("y".bright_green(), "N".bright_red().bold().underline()),
+    };
+
+    loop {
+        let answer = input(format!(
+            "{question} [{yes}/{no}]: ",
+            question = question.bright_cyan(),
+        ));
+
+        let match_on = answer.trim().to_lowercase();
+
+        match match_on.as_str() {
+            "yes" | "y" | "yeah" | "yeh" | "true" => return true,
+            "no" | "n" | "nope" | "nah" | "false" => return false,
+            "" => return fallback,
+            _ => {
+                eprintln!("Invalid response: '{}'", match_on);
+            },
+        }
+    }
+}
+
+// Ask for user input.
+pub fn input<S: AsRef<str>>(prefix: S) -> String {
+    let mut answer = String::new();
+
+    print!("{}", prefix.as_ref());
+
+    io::stdout().flush().unwrap();
+    io::stdin().read_line(&mut answer).unwrap();
+
+    answer
 }

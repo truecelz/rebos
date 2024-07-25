@@ -1,7 +1,7 @@
 [package]
 name = "rebos"
 authors = ["Jackson Novak <jacksonnovak@proton.me>"]
-version = "3.4.0"
+version = "3.5.0"
 edition = "2021"
 description = "NixOS-like repeatability for any Linux distro."
 license = "GPL-3.0-or-later"
@@ -25,6 +25,7 @@ colored = "2.0.4"
 fspp = "2.2.1"
 hashbrown = { version = "0.14.3", features = ["serde"] }
 hostname = "0.3.1"
+nanoid = "0.4.0"
 piglog = { version = "1.4.1", features = ["clap_derive"] }
 serde = { version = "1.0.188", features = ["derive"] }
 toml = "0.7.8"

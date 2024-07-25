@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use clap::{Parser, Subcommand};
+use clap::{ Parser, Subcommand, ValueEnum };
 use piglog::LogMode;
 
 #[derive(Parser)]
@@ -26,6 +26,8 @@ pub enum Commands {
         #[command(subcommand)]
         command: ConfigCommands,
     },
+    /// Force Rebos to unlock (this could break your system if done without reason)
+    ForceUnlock,
     /// Manager commands
     Managers {
         #[command(subcommand)]
@@ -48,6 +50,13 @@ pub enum APICommands {
     /// Use the Rebos log message system (Generic)
     EchoGeneric {
         message: String,
+    },
+    /// Use Rebos to ask the user for a boolean yes or no question (Exit Status: (0 = Yes, 1 = No))
+    BoolQuestion {
+        /// Question to be asked
+        question: String,
+        /// Fallback for when the user simply presses enter to accept the default
+        fallback: CLIBoolean,
     },
 }
 
@@ -115,6 +124,23 @@ pub enum CurrentCommands {
     ToLatest,
     /// Set the 'current' generation to a specific generation
     Set(SetCurrent),
+}
+
+#[derive(ValueEnum, Debug, Clone, Copy)]
+// The only reason this enum exists is because Clap bugs out when asked for a `bool`.
+pub enum CLIBoolean {
+    Yes,
+    No,
+}
+
+impl CLIBoolean {
+    #[inline(always)]
+    pub fn bool(&self) -> bool {
+        match self {
+            Self::Yes => true,
+            Self::No => false,
+        }
+    }
 }
 
 #[derive(Parser, Debug)]

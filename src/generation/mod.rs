@@ -18,6 +18,7 @@ use crate::management::load_manager;
 use crate::config::{Config, ConfigSide};
 use crate::config::config_for;
 use crate::system;
+use crate::lock::*;
 
 trait Migrate<T> {
     fn migrate(self) -> T;
@@ -199,6 +200,8 @@ pub trait GenerationUtils {
 
 // Return generation structure for...
 pub fn gen(side: ConfigSide) -> Result<Generation, io::Error> {
+    abort_if_locked();
+
     let mut generation = match read_to_gen(&config_for(Config::Generation, side)) {
         Ok(o) => o,
         Err(e) => return Err(e),
@@ -269,6 +272,8 @@ macro_rules! deserialize_legacy {
 
 // Read a file and return a Generation object.
 fn read_to_gen(path: &Path) -> Result<Generation, io::Error> {
+    abort_if_locked();
+
     let gen_string = match file::read(path) {
         Ok(o) => o,
         Err(e) => {
@@ -315,6 +320,8 @@ pub fn gen_exists(gen_id: usize) -> bool {
 
 // Get generation for the id
 pub fn get_gen_from_usize(gen_id: usize) -> Result<Generation, io::Error> {
+    abort_if_locked();
+
     let generation = read_to_gen(&places::gens().add_str(&gen_id.to_string()).add_str("gen.toml"))?;
 
     return Ok(generation);
@@ -322,6 +329,8 @@ pub fn get_gen_from_usize(gen_id: usize) -> Result<Generation, io::Error> {
 
 // Get generation commit for the id
 pub fn get_gen_commit_from_usize(gen_id: usize) -> Result<String, io::Error> {
+    abort_if_locked();
+
     let gen_commit = file::read(&places::gens().add_str(&gen_id.to_string()).add_str("commit"))?;
 
     return Ok(gen_commit);
@@ -329,6 +338,8 @@ pub fn get_gen_commit_from_usize(gen_id: usize) -> Result<String, io::Error> {
 
 // Get latest generation number.
 pub fn latest_number() -> Result<usize, io::Error> {
+    abort_if_locked();
+
     let generation_numbers = match list_gen_nums() {
         Ok(o) => o,
         Err(e) => return Err(e),
@@ -351,6 +362,8 @@ pub fn latest_number() -> Result<usize, io::Error> {
 
 // Create a new system generation based on the user generation.
 pub fn commit(msg: &str) -> Result<(), io::Error> {
+    abort_if_locked();
+
     let generation_number = match latest_number() {
         Ok(o) => o,
         Err(e) => return Err(e),
@@ -412,6 +425,8 @@ pub fn commit(msg: &str) -> Result<(), io::Error> {
 }
 
 fn get_order(gen: &Generation) -> Result<Vec<String>, io::Error> {
+    abort_if_locked();
+
     let return_order = {
         let path = places::base_user().add_str("manager_order.toml");
 
@@ -473,6 +488,8 @@ fn get_order(gen: &Generation) -> Result<Vec<String>, io::Error> {
 
 // Build the 'current' system generation.
 pub fn build() -> Result<(), io::Error> {
+    abort_if_locked();
+
     run_hook_and_return_if_err!("pre_build");
 
     let current_num = match get_current() {
@@ -592,6 +609,8 @@ pub fn build() -> Result<(), io::Error> {
 
 // Set the 'current' generation to another older generation.
 pub fn rollback(by: isize, verbose: bool) -> Result<(), io::Error> {
+    abort_if_locked();
+
     let current_num = match get_current() {
         Ok(o) => o,
         Err(e) => return Err(e),
@@ -609,6 +628,8 @@ pub fn rollback(by: isize, verbose: bool) -> Result<(), io::Error> {
 
 // Set the 'current' generation to the latest generation.
 pub fn latest(verbose: bool) -> Result<(), io::Error> {
+    abort_if_locked();
+
     match set_current(match latest_number() {
         Ok(o) => o,
         Err(e) => return Err(e),
@@ -622,6 +643,8 @@ pub fn latest(verbose: bool) -> Result<(), io::Error> {
 
 // Set the 'current' generation to a specific generation.
 pub fn set_current(to: usize, verbose: bool) -> Result<(), io::Error> {
+    abort_if_locked();
+
     if to > match latest_number() {
         Ok(o) => o,
         Err(e) => return Err(e),
@@ -652,6 +675,8 @@ pub fn set_current(to: usize, verbose: bool) -> Result<(), io::Error> {
 
 // Set the 'built' generation to a specific generation.
 pub fn set_built(to: usize, verbose: bool) -> Result<(), io::Error> {
+    abort_if_locked();
+
     if to > match latest_number() {
         Ok(o) => o,
         Err(e) => return Err(e),
@@ -682,6 +707,8 @@ pub fn set_built(to: usize, verbose: bool) -> Result<(), io::Error> {
 
 // Get the 'current' generation number.
 pub fn get_current() -> Result<usize, io::Error> {
+    abort_if_locked();
+
     let contents = match file::read(&places::gens().add_str("current")) {
         Ok(o) => o,
         Err(e) => {
@@ -703,16 +730,22 @@ pub fn get_current() -> Result<usize, io::Error> {
 
 // Get the currently built generation number. (With output.)
 pub fn get_built() -> Result<usize, io::Error> {
+    abort_if_locked();
+
     return get_built_core(true);
 }
 
 // Get the currently built generation number. (Without output.)
 pub fn get_built_no_output() -> Result<usize, io::Error> {
+    abort_if_locked();
+
     return get_built_core(false);
 }
 
 // Get the currently built generation number. (CORE)
 pub fn get_built_core(output: bool) -> Result<usize, io::Error> {
+    abort_if_locked();
+
     let contents = match file::read(&places::gens().add_str("built")) {
         Ok(o) => o,
         Err(e) => {
@@ -740,11 +773,15 @@ pub fn get_built_core(output: bool) -> Result<usize, io::Error> {
 
 // Has a generation been built yet?
 pub fn been_built() -> bool {
+    abort_if_locked();
+
     return places::gens().add_str("built").exists();
 }
 
 // Delete old generations.
 pub fn delete_old(how_many: usize, verbose: bool) -> Result<(), io::Error> {
+    abort_if_locked();
+
     let offset = match get_oldest() {
         Ok(o) => o,
         Err(e) => return Err(e),
@@ -771,6 +808,8 @@ pub fn delete_old(how_many: usize, verbose: bool) -> Result<(), io::Error> {
 
 // Delete a specific generation.
 pub fn delete(generation: usize, verbose: bool) -> Result<(), io::Error> {
+    abort_if_locked();
+
     if match is_current(generation) {
         Ok(o) => o,
         Err(e) => return Err(e),
@@ -814,6 +853,8 @@ pub fn delete(generation: usize, verbose: bool) -> Result<(), io::Error> {
 
 // Move a generation to another spot. (Number -> Number)
 pub fn move_gen(from: usize, to: usize, verbose: bool) -> Result<(), io::Error> {
+    abort_if_locked();
+
     let current = is_current(from)?;
     let built = is_built(from)?;
 
@@ -839,6 +880,8 @@ pub fn move_gen(from: usize, to: usize, verbose: bool) -> Result<(), io::Error> 
 
 // See if a generation exists.
 pub fn exists(generation: usize) -> Result<bool, io::Error> {
+    abort_if_locked();
+
     let gen_nums = match list_gen_nums() {
         Ok(o) => o,
         Err(e) => return Err(e),
@@ -849,6 +892,8 @@ pub fn exists(generation: usize) -> Result<bool, io::Error> {
 
 // List generation numbers.
 pub fn list_gen_nums() -> Result<Vec<usize>, io::Error> {
+    abort_if_locked();
+
     let gen_list = match list_with_no_calls() {
         Ok(o) => o,
         Err(e) => return Err(e),
@@ -868,6 +913,8 @@ pub fn list_gen_nums() -> Result<Vec<usize>, io::Error> {
 
 // Parse generation name to usize.
 pub fn usize_from_gen_name(name: &str) -> Result<usize, io::Error> {
+    abort_if_locked();
+
     return Ok(match name.trim().parse() {
         Ok(o) => o,
         Err(_e) => {
@@ -879,6 +926,8 @@ pub fn usize_from_gen_name(name: &str) -> Result<usize, io::Error> {
 
 // Return true or false based on if the given generation is the 'current' generation.
 pub fn is_current(generation: usize) -> Result<bool, io::Error> {
+    abort_if_locked();
+
     if generation == match get_current() {
         Ok(o) => o,
         Err(e) => return Err(e),
@@ -893,6 +942,8 @@ pub fn is_current(generation: usize) -> Result<bool, io::Error> {
 
 // Return true or false based on if the given generation is the built generation.
 pub fn is_built(generation: usize) -> Result<bool, io::Error> {
+    abort_if_locked();
+
     if generation == match get_built() {
         Ok(o) => o,
         Err(e) => return Err(e),
@@ -907,16 +958,22 @@ pub fn is_built(generation: usize) -> Result<bool, io::Error> {
 
 // List all generations. (NORMAL)
 pub fn list() -> Result<Vec<(String, String, bool, bool)>, io::Error> {
+    abort_if_locked();
+
     return list_core(true);
 }
 
 // List all generations. (ISOLATED MODE | For avoiding errors with called un-needed functions!)
 pub fn list_with_no_calls() -> Result<Vec<(String, String, bool, bool)>, io::Error> {
+    abort_if_locked();
+
     return list_core(false);
 }
 
 // List all generations. (CORE)
 fn list_core(calls: bool) -> Result<Vec<(String, String, bool, bool)>, io::Error> {
+    abort_if_locked();
+
     let gen_listed = match directory::list_items(&places::gens()) {
         Ok(o) => o,
         Err(e) => {
@@ -984,6 +1041,8 @@ fn list_core(calls: bool) -> Result<Vec<(String, String, bool, bool)>, io::Error
 
 // Print out the list of generations.
 pub fn list_print() -> Result<(), io::Error> {
+    abort_if_locked();
+
     let list_items = match list() {
         Ok(o) => o,
         Err(e) => return Err(e),
@@ -1036,6 +1095,8 @@ fn get_list_vector_names(list_vec: &Vec<(String, String, bool, bool)>) -> Vec<St
 
 // Sort list vector.
 fn sort_list_vector(list_vec: &Vec<(String, String, bool, bool)>) -> Result<Vec<(String, String, bool, bool)>, io::Error> {
+    abort_if_locked();
+
     if list_vec.len() == 0 {
         return Ok(list_vec.clone());
     }
@@ -1074,6 +1135,8 @@ fn sort_list_vector(list_vec: &Vec<(String, String, bool, bool)>) -> Result<Vec<
 
 // Get oldest generation name.
 pub fn get_oldest() -> Result<usize, io::Error> {
+    abort_if_locked();
+
     let gen_names = get_list_vector_names(&match sort_list_vector(&match list_with_no_calls() {
         Ok(o) => o,
         Err(e) => return Err(e),
@@ -1099,6 +1162,8 @@ pub fn get_oldest() -> Result<usize, io::Error> {
 
 // Get the 'current' generation TOML file.
 pub fn current_gen() -> Result<Path, io::Error> {
+    abort_if_locked();
+
     let current = match get_current() {
         Ok(o) => o,
         Err(e) => return Err(e),
