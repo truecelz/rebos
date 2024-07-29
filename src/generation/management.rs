@@ -1,7 +1,11 @@
 use std::io;
 use piglog::prelude::*;
 
+use crate::lock;
+
 pub fn tidy_up() -> Result<(), io::Error> {
+    lock::abort_if_locked();
+
     let deleted = clean_dups(false)?;
     let aligned = align(false)?;
 
@@ -12,6 +16,8 @@ pub fn tidy_up() -> Result<(), io::Error> {
 }
 
 pub fn clean_dups(verbose: bool) -> Result<usize, io::Error> {
+    lock::abort_if_locked();
+
     let mut deleted: usize = 0; // The amount of deleted generations.
 
     let mut gen_nums = super::list_gen_nums()?;
@@ -82,6 +88,8 @@ pub fn clean_dups(verbose: bool) -> Result<usize, io::Error> {
 }
 
 pub fn align(verbose: bool) -> Result<usize, io::Error> {
+    lock::abort_if_locked();
+
     let mut moved: usize = 0; // The amount of moved generations.
 
     let mut gen_nums = super::list_gen_nums()?;

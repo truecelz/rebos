@@ -28,6 +28,8 @@ pub enum Commands {
     },
     /// Force Rebos to unlock (this could break your system if done without reason)
     ForceUnlock,
+    /// Is Rebos unlocked? (Exit Status: (0 = Yes, 1 = No))
+    IsUnlocked,
     /// Manager commands
     Managers {
         #[command(subcommand)]

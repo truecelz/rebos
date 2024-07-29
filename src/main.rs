@@ -324,7 +324,7 @@ fn app() -> ExitCode {
                     }
                     print!("\n");
 
-                    match lock::lock_off() {
+                    match lock::lock_off_force() {
                         Ok(_) => piglog::success!("Unlocked Rebos!"),
                         Err(e) => {
                             piglog::fatal!("Failed to unlock: {e}");
@@ -344,6 +344,12 @@ fn app() -> ExitCode {
             else {
                 piglog::info!("Not locked... skipping...");
             }
+        },
+        cli::Commands::IsUnlocked => {
+            match lock::is_lock_on() {
+                false => return ExitCode::Success,
+                true => return ExitCode::Fail,
+            };
         },
         cli::Commands::Managers { command } => {
             match command {

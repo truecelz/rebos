@@ -42,8 +42,24 @@ pub fn lock_on() -> Result<(), io::Error> {
     Ok(())
 }
 
-// Unlock other Rebos sessions from running.
+#[inline(always)]
 pub fn lock_off() -> Result<(), io::Error> {
+    lock_off_core(false)
+}
+
+#[inline(always)]
+pub fn lock_off_force() -> Result<(), io::Error> {
+    lock_off_core(true)
+}
+
+// Unlock other Rebos sessions from running.
+pub fn lock_off_core(force: bool) -> Result<(), io::Error> {
+    if force == false {
+        if lock_state()? != LockState::OnOwned {
+            return Ok(());
+        }
+    }
+
     if is_lock_on_without_owner() {
         match fs_action::delete(&lock_file_path()) {
             Ok(_) => (),
