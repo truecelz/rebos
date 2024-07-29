@@ -34,11 +34,27 @@ enum ExitCode {
 fn test_code() {
 }
 
+// Cleanup when Rebos fails.
+fn error_cleanup() {
+    let lock_state = match lock::lock_state() {
+        Ok(o) => o,
+        Err(_) => return,
+    };
+    if lock_state == lock::LockState::OnOwned {
+        let _ = lock::lock_off(); // We don't have to handle this, since this is just
+                                  // cleanup and the exit code will be failure anyway.
+    }
+}
+
 // We are using main() to run another function, and exit according to the exit code.
 fn main() -> std::process::ExitCode {
     match app() {
         ExitCode::Success => std::process::ExitCode::SUCCESS,
-        ExitCode::Fail => std::process::ExitCode::FAILURE,
+        ExitCode::Fail => {
+            error_cleanup();
+
+            std::process::ExitCode::FAILURE
+        },
     }
 }
 

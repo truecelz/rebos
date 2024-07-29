@@ -6,6 +6,17 @@ use colored::Colorize;
 use crate::places;
 use crate::proc;
 
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
+/// State of the lock (on (owned), on (not owned), off)
+pub enum LockState {
+    /// The lock is off
+    Off,
+    /// The lock is on, and the owner is this Rebos process
+    OnOwned,
+    /// The lock is on, but another Rebos process is the owner
+    OnNotOwned,
+}
+
 // Lock other Rebos sessions from running.
 pub fn lock_on() -> Result<(), io::Error> {
     if is_lock_on() == false {
@@ -54,6 +65,16 @@ pub fn lock_off() -> Result<(), io::Error> {
     }
 
     Ok(())
+}
+
+#[inline(always)]
+pub fn lock_state() -> Result<LockState, io::Error> {
+    Ok(match (is_lock_on(), is_lock_on_without_owner()) {
+        (false, false) => LockState::Off,
+        (false, true) => LockState::OnOwned,
+        (true, true) => LockState::OnNotOwned,
+        _ => unreachable!(),
+    })
 }
 
 #[inline(always)]
