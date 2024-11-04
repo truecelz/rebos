@@ -1,0 +1,38 @@
+name: Rust
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          override-file: rust-toolchain
+
+      - name: Build
+        run: cargo build --release
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag: ${{ github.ref }}
+          files: target/release/rebos  # Adjust this path if your binary has a different name
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
